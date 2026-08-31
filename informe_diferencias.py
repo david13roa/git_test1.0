@@ -525,12 +525,45 @@ def imprime_consola(resumen: pd.DataFrame, ranking: pd.DataFrame, top: int) -> N
 # Programa principal
 # --------------------------------------------------------------------------- #
 
+def pide_archivo() -> Path | None:
+    """Busca el Excel en la carpeta del programa o lo pregunta (modo doble clic)."""
+    carpeta = Path(__file__).resolve().parent
+    candidatos = [
+        x for x in sorted(carpeta.glob("*.xls*"))
+        if not x.name.startswith(("~$", "INFORME_PICKERS"))
+    ]
+
+    if len(candidatos) == 1:
+        print(f"Se usara el archivo encontrado: {candidatos[0].name}\n")
+        return candidatos[0]
+
+    if len(candidatos) > 1:
+        print("Se encontraron varios archivos de Excel en esta carpeta:\n")
+        for i, x in enumerate(candidatos, 1):
+            print(f"  {i}. {x.name}")
+        respuesta = input("\nEscriba el numero del archivo a procesar: ").strip()
+        if respuesta.isdigit() and 1 <= int(respuesta) <= len(candidatos):
+            return candidatos[int(respuesta) - 1]
+        print("Opcion invalida.", file=sys.stderr)
+        return None
+
+    print("No se encontro ningun Excel en la carpeta del programa.")
+    ruta = input("Arrastre aqui el archivo (o escriba la ruta) y presione Enter: ").strip()
+    ruta = ruta.strip('"').strip("'")
+    if not ruta:
+        print("No se indico ningun archivo.", file=sys.stderr)
+        return None
+    return Path(ruta)
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(
         description="Genera un informe detallado de diferencias de despacho por picker.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    p.add_argument("entrada", type=Path, help="Excel con las diferencias (Hoja1) y los despachos (Hoja2).")
+    p.add_argument("entrada", type=Path, nargs="?", default=None,
+                   help="Excel con las diferencias (Hoja1) y los despachos (Hoja2). "
+                        "Si se omite, el programa lo busca en su carpeta o lo pregunta.")
     p.add_argument("-o", "--salida", type=Path, default=None,
                    help="Excel de salida (por defecto INFORME_PICKERS_<entrada>.xlsx).")
     p.add_argument("--hoja-diferencias", default="Hoja1", help="Nombre o indice de la hoja de diferencias.")
@@ -547,6 +580,11 @@ def main(argv=None) -> int:
     p.add_argument("--desde", default=None, help="Fecha inicial AAAA-MM-DD.")
     p.add_argument("--hasta", default=None, help="Fecha final AAAA-MM-DD.")
     args = p.parse_args(argv)
+
+    if args.entrada is None:
+        args.entrada = pide_archivo()
+        if args.entrada is None:
+            return 1
 
     if not args.entrada.exists():
         print(f"ERROR: no existe el archivo {args.entrada}", file=sys.stderr)
@@ -619,4 +657,8 @@ def main(argv=None) -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    codigo = main()
+    # Con doble clic la ventana se cerraria de inmediato: se espera al usuario.
+    if len(sys.argv) == 1:
+        input("Proceso terminado. Presione Enter para cerrar esta ventana...")
+    raise SystemExit(codigo)

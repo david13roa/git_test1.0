@@ -5,13 +5,50 @@ informe en Excel donde se ve **qué picker tiene diferencias en cada tienda, el
 valor exacto de cada una, y un ranking de quiénes generan más diferencias con el
 costo que representan**.
 
-## Instalación
+## Instalación en el computador de la empresa (Windows)
+
+Necesitas 3 archivos en una misma carpeta: `informe_diferencias.py`,
+`requirements.txt` y `EJECUTAR_INFORME.bat`.
+
+**1. Instalar Python** (una sola vez). Descárgalo de
+<https://www.python.org/downloads/> y, en la primera pantalla del instalador,
+**marca la casilla "Add Python to PATH"** antes de darle a instalar. Ese paso es
+el que suele fallar; sin él, el programa no encuentra Python.
+
+> Si el equipo tiene restricciones de administrador, elige la opción
+> *"Install for me only"* / *"Solo para mí"*: no requiere permisos de admin.
+
+**2. Poner los 3 archivos en una carpeta** junto con el Excel
+`INFORME_DIFERENCIAS.xlsx`.
+
+**3. Doble clic en `EJECUTAR_INFORME.bat`.** La primera vez instala solo las
+librerías que faltan (tarda un minuto); después ya corre directo. Se abre una
+ventana negra con el resumen y el ranking, y el Excel del informe queda en la
+misma carpeta como `INFORME_PICKERS_INFORME_DIFERENCIAS.xlsx`.
+
+También puedes **arrastrar cualquier Excel encima del `.bat`** para procesar ese
+archivo en particular.
+
+### Si la red de la empresa bloquea la instalación
+
+Es lo más común en equipos corporativos: el `pip install` falla por el proxy. Abre
+el *Símbolo del sistema* (`cmd`) y prueba:
+
+```
+py -m pip install --user pandas openpyxl
+```
+
+Si sigue fallando, pídele a sistemas que instale esas dos librerías, o descarga los
+archivos `.whl` de `pandas` y `openpyxl` desde <https://pypi.org> en un equipo con
+internet e instálalos con `py -m pip install --user ruta\al\archivo.whl`.
+
+## Uso desde la consola
+
+Si prefieres la línea de comandos (Windows, Mac o Linux):
 
 ```bash
 pip install -r requirements.txt
 ```
-
-## Uso
 
 ```bash
 # Informe estándar (solo diferencias con ESTADO = "Aplica")
@@ -30,6 +67,9 @@ python informe_diferencias.py INFORME_DIFERENCIAS.xlsx --estado todos --desde 20
 Si no se indica `-o`, el resultado se guarda como `INFORME_PICKERS_<archivo>.xlsx`
 junto al archivo de entrada. Además, el resumen y el ranking se imprimen en la
 consola.
+
+Si ejecutas `python informe_diferencias.py` **sin indicar el archivo**, el programa
+busca el Excel en su propia carpeta; si hay varios, te pregunta cuál usar.
 
 ### Opciones
 
@@ -96,6 +136,16 @@ Con `--solo-cobertura` el análisis se limita a esa ventana, y ahí la atribuci�
 a más de la mitad de las líneas. Para atribuir el resto del periodo hay que ampliar
 la hoja de despachos con las entregas de los demás días y cuadrantes; el programa las
 tomará automáticamente sin cambios en el código.
+
+## Solución de problemas
+
+| Mensaje | Qué hacer |
+|---|---|
+| `no se encontro Python en este equipo` | Reinstala Python marcando **"Add Python to PATH"**. |
+| `No se pudieron instalar las librerias` | Es el proxy de la empresa. Ver la sección de instalación arriba. |
+| `No se encontro ningun Excel en la carpeta` | Copia el Excel junto al programa, o arrástralo sobre el `.bat`. |
+| `Permission denied` al guardar | Cierra el Excel del informe anterior; Windows lo bloquea mientras está abierto. |
+| `No se encontro ninguna columna para...` | Cambiaron los encabezados del Excel. El mensaje lista las columnas que sí encontró. |
 
 ## Notas de robustez
 
