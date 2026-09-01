@@ -129,6 +129,33 @@ La casilla «recordar los datos en este navegador» guarda el análisis en el eq
 quien lo usa para no volver a cargar el archivo cada vez; viene desactivada y el botón
 «Olvidar datos» lo borra.
 
+### Publicarlo en GitHub Pages
+
+El repositorio trae un flujo de trabajo que publica el tablero **sin datos** cada vez
+que se toca `tablero/` o `exclusiones.json` en la rama `main`. Quien abre la página
+carga su propio Excel, que se procesa en su navegador y no sale de su equipo, así que
+el sitio puede vivir en un repositorio público sin exponer nada.
+
+Para activarlo, una sola vez:
+
+1. Llevar estos cambios a `main` (mezclar la rama de trabajo).
+2. En el repositorio: **Settings → Pages → Source: GitHub Actions**.
+3. Esperar a que termine el flujo en la pestaña **Actions**.
+
+Queda publicado en `https://<usuario>.github.io/<repositorio>/`. Después se
+republica solo en cada cambio, o a mano desde Actions → *Publicar tablero → Run workflow*.
+
+El flujo incluye una barrera de seguridad: si por error el tablero se construyera
+**con** datos incrustados, la publicación falla en vez de exponerlos.
+
+#### Funciona sin internet
+
+El lector de Excel (SheetJS) viaja en `tablero/vendor/` y se publica junto a la página,
+porque en las redes corporativas los CDN suelen estar bloqueados y sin él el botón de
+cargar no serviría. El tablero intenta primero la copia local y solo recurre al CDN si
+no la encuentra. Probado con todo el tráfico externo bloqueado: carga el Excel y calcula
+igual, con cero peticiones a internet.
+
 ### Regenerarlo con datos nuevos
 
 ```bash

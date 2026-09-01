@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <title>Control de Diferencias Cava</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1651,15 +1652,30 @@ function reconstruir(libro){
 }
 
 function cargarSheetJS(){
+  /* Primero la copia que viaja con el sitio y solo despues el CDN: en las redes
+     corporativas los CDN suelen estar bloqueados, y sin lector de Excel el boton
+     de cargar no serviria de nada. */
+  const fuentes = [
+    "xlsx.full.min.js",
+    "vendor/xlsx.full.min.js",
+    "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js",
+  ];
   return new Promise((ok, mal) => {
     if (window.XLSX) return ok();
-    const s = document.createElement("script");
-    s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
-    s.onload = () => ok();
-    s.onerror = () => mal(new Error(
-      "No se pudo cargar el lector de Excel. Revise la conexión e intente de nuevo; " +
-      "los datos que ya están en pantalla siguen disponibles."));
-    document.head.appendChild(s);
+    let i = 0;
+    const intenta = () => {
+      if (i >= fuentes.length){
+        return mal(new Error(
+          "No se pudo cargar el lector de Excel. Si la red bloquea internet, "
+          + "el archivo xlsx.full.min.js debe estar junto a esta pagina."));
+      }
+      const s = document.createElement("script");
+      s.src = fuentes[i++];
+      s.onload = () => (window.XLSX ? ok() : intenta());
+      s.onerror = intenta;
+      document.head.appendChild(s);
+    };
+    intenta();
   });
 }
 
