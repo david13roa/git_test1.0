@@ -150,11 +150,14 @@ El flujo incluye una barrera de seguridad: si por error el tablero se construyer
 
 #### Funciona sin internet
 
-El lector de Excel (SheetJS) viaja en `tablero/vendor/` y se publica junto a la página,
-porque en las redes corporativas los CDN suelen estar bloqueados y sin él el botón de
-cargar no serviría. El tablero intenta primero la copia local y solo recurre al CDN si
-no la encuentra. Probado con todo el tráfico externo bloqueado: carga el Excel y calcula
-igual, con cero peticiones a internet.
+El lector de Excel (SheetJS, en `tablero/vendor/`) se **incrusta dentro del propio
+`index.html`** al construirlo. No es un archivo aparte ni viene de un CDN: la página no
+hace ni una sola petición para leer el Excel, así que no hay nada que una red corporativa
+pueda bloquear ni ruta relativa que se pueda romper.
+
+Eso hace la página más pesada (unos 940 KB en vez de 77 KB), y vale la pena: un tablero
+que no puede leer Excel no sirve para nada. Probado con todo el tráfico externo bloqueado
+y sirviendo el sitio en una subruta como la de Pages: cero peticiones, mismos números.
 
 ### Regenerarlo con datos nuevos
 

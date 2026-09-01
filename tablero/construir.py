@@ -24,6 +24,8 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parent
 MARCA = "/*__DATOS__*/"
 MARCA_EXCLUSIONES = "/*__EXCLUSIONES__*/"
+MARCA_LECTOR = "/*__LECTOR__*/"
+LECTOR = RAIZ / "vendor" / "xlsx.full.min.js"
 EXCLUSIONES = RAIZ.parent / "exclusiones.json"
 
 
@@ -41,6 +43,14 @@ def construir(datos: str, plantilla: Path, salida: Path) -> None:
                                separators=(",", ":"), ensure_ascii=False)
             reglas = lista[1:-1]  # el marcador ya esta entre corchetes
     html = html.replace(MARCA_EXCLUSIONES, reglas)
+
+    # El lector de Excel se incrusta en la pagina. Asi no hay peticion que una red
+    # corporativa pueda bloquear, ni ruta relativa que se pueda romper.
+    if LECTOR.exists():
+        codigo = LECTOR.read_text(encoding="utf-8")
+        if "</script" in codigo.lower():
+            raise SystemExit("El lector contiene '</script' y no se puede incrustar tal cual.")
+        html = html.replace(MARCA_LECTOR, codigo)
 
     # Un "</" dentro de los datos cerraria la etiqueta <script> antes de tiempo.
     salida.write_text(html.replace(MARCA, datos.replace("</", "<\\/")), encoding="utf-8")

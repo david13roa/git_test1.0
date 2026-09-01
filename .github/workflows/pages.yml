@@ -37,9 +37,9 @@ jobs:
       - name: Armar el tablero sin datos
         run: |
           mkdir -p sitio
+          # El lector de Excel queda incrustado dentro del propio index.html:
+          # sin peticiones que una red corporativa pueda bloquear.
           python tablero/construir.py --vacio -o sitio/index.html
-          # El lector de Excel viaja con el sitio para no depender de un CDN.
-          cp tablero/vendor/xlsx.full.min.js sitio/
           cp tablero/vendor/LICENSE-xlsx.txt sitio/
 
       - name: Verificar que no se publiquen datos
@@ -51,6 +51,14 @@ jobs:
             exit 1
           fi
           echo "OK: el tablero no contiene datos."
+
+          # El tablero es inutil si no puede leer Excel, asi que se verifica
+          # que el lector quedo dentro de la pagina.
+          if ! grep -q "XLSX" sitio/index.html; then
+            echo "ERROR: el lector de Excel no quedo incrustado."
+            exit 1
+          fi
+          echo "OK: lector de Excel incrustado ($(du -h sitio/index.html | cut -f1))."
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

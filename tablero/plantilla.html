@@ -418,6 +418,7 @@ tbody tr.pulsable{cursor:pointer}
 <footer class="pie-pagina oculto" id="pie"></footer>
 <div id="tip" role="tooltip"></div>
 
+<script id="lectorExcel">/*__LECTOR__*/</script>
 <script id="datosCrudos" type="application/json">/*__DATOS__*/</script>
 <script>
 "use strict";
@@ -1655,6 +1656,8 @@ function cargarSheetJS(){
   /* Primero la copia que viaja con el sitio y solo despues el CDN: en las redes
      corporativas los CDN suelen estar bloqueados, y sin lector de Excel el boton
      de cargar no serviria de nada. */
+  /* Normalmente el lector ya viene incrustado en esta misma pagina; estas
+     fuentes son solo por si se construyo sin el. */
   const fuentes = [
     "xlsx.full.min.js",
     "vendor/xlsx.full.min.js",
