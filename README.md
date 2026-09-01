@@ -1,11 +1,74 @@
-# Informe de diferencias de despacho por picker
+# Diferencias de despacho por picker
+
+Dos herramientas sobre el mismo análisis:
+
+1. **Tablero web interactivo** — se abre con un link, no requiere instalar nada.
+2. **Informe en Excel** — un programa de consola que genera el libro con todas las hojas.
+
+Ambos responden lo mismo: qué picker tiene diferencias en cada tienda, el valor
+exacto, y el ranking de quiénes generan más costo.
+
+---
+
+## 1. Tablero web
+
+Un solo archivo `.html` que corre **completamente en el navegador**: no hay servidor,
+no hay instalación y los datos nunca salen del equipo de quien lo abre. Funciona
+publicado en una URL o abierto desde el disco con doble clic.
+
+### Qué trae
+
+| Pestaña | Para qué sirve |
+|---|---|
+| **Panorama** | Costo total, tendencia diaria, faltantes contra sobrantes y el ranking de pickers. |
+| **Pickers** | Tabla completa con costo por caja y % de entregas con diferencia, más la matriz picker × tienda. |
+| **Tiendas** | Ranking de tiendas y el picker que más aporta al costo en cada una. |
+| **Materiales** | Las referencias que más se pierden. |
+| **Detalle** | Línea a línea, filtrable y exportable. |
+
+Los filtros de arriba (fechas, estado, picker, tienda, cuadrante, búsqueda de material)
+afectan todas las pestañas a la vez. Al hacer clic en una barra o en una fila se filtra
+el tablero por ese picker o esa tienda. El botón **Exportar CSV** baja lo que esté
+en pantalla, y **Cargar Excel** procesa un archivo nuevo sin salir de la página.
+
+### Regenerarlo con datos nuevos
+
+```bash
+pip install -r requirements.txt
+python tablero/construir.py --excel INFORME_DIFERENCIAS.xlsx -o tablero_diferencias.html
+```
+
+Eso produce el `.html` listo para publicar o enviar. También se puede hacer en dos pasos
+si se quiere guardar el JSON intermedio:
+
+```bash
+python preparar_datos_web.py INFORME_DIFERENCIAS.xlsx -o datos.json
+python tablero/construir.py datos.json -o tablero_diferencias.html
+```
+
+Para el mes a mes no hace falta regenerar nada: basta abrir el tablero y usar
+**Cargar Excel** con el archivo nuevo.
+
+### Archivos
+
+| Archivo | Qué hace |
+|---|---|
+| `tablero/plantilla.html` | El tablero: estilos, gráficos en SVG y toda la lógica. Los datos entran donde dice `/*__DATOS__*/`. |
+| `tablero/construir.py` | Inserta los datos en la plantilla y produce el archivo final. |
+| `preparar_datos_web.py` | Convierte el Excel en el JSON compacto que consume el tablero. |
+
+Los gráficos están dibujados a mano en SVG, sin librerías de terceros, justamente para
+que el tablero funcione sin internet. La única dependencia externa es la tipografía y el
+lector de Excel del botón «Cargar Excel», y ambos degradan sin romper nada.
+
+---
+
+## 2. Informe en Excel
 
 Programa en Python que toma el archivo `INFORME_DIFERENCIAS.xlsx` y genera un
-informe en Excel donde se ve **qué picker tiene diferencias en cada tienda, el
-valor exacto de cada una, y un ranking de quiénes generan más diferencias con el
-costo que representan**.
+informe en Excel con siete hojas.
 
-## Instalación en el computador de la empresa (Windows)
+### Instalación en el computador de la empresa (Windows)
 
 Necesitas 3 archivos en una misma carpeta: `informe_diferencias.py`,
 `requirements.txt` y `EJECUTAR_INFORME.bat`.
@@ -42,7 +105,7 @@ Si sigue fallando, pídele a sistemas que instale esas dos librerías, o descarg
 archivos `.whl` de `pandas` y `openpyxl` desde <https://pypi.org> en un equipo con
 internet e instálalos con `py -m pip install --user ruta\al\archivo.whl`.
 
-## Uso desde la consola
+### Uso desde la consola
 
 Si prefieres la línea de comandos (Windows, Mac o Linux):
 
@@ -84,7 +147,11 @@ busca el Excel en su propia carpeta; si hay varios, te pregunta cuál usar.
 | `--desde`, `--hasta` | Rango de fechas `AAAA-MM-DD`. |
 | `--top` | Cuántos pickers mostrar en consola (por defecto 15). |
 
+---
+
 ## Cómo se asigna el picker a cada diferencia
+
+_Aplica igual al tablero y al informe de Excel._
 
 La hoja de diferencias no trae el número de entrega en una columna propia: viene
 dentro de la llave concatenada (`COMPROBACIÓN DUPLICADOS`), con el formato
@@ -99,7 +166,7 @@ confiable.
 Las diferencias cuya entrega no aparece en la hoja de despachos quedan en la hoja
 `Sin Picker`, para que ningún peso se pierda del total.
 
-## Hojas del informe
+### Hojas del informe
 
 | Hoja | Contenido |
 |---|---|
@@ -137,7 +204,7 @@ a más de la mitad de las líneas. Para atribuir el resto del periodo hay que am
 la hoja de despachos con las entregas de los demás días y cuadrantes; el programa las
 tomará automáticamente sin cambios en el código.
 
-## Solución de problemas
+### Solución de problemas
 
 | Mensaje | Qué hacer |
 |---|---|
@@ -147,7 +214,7 @@ tomará automáticamente sin cambios en el código.
 | `Permission denied` al guardar | Cierra el Excel del informe anterior; Windows lo bloquea mientras está abierto. |
 | `No se encontro ninguna columna para...` | Cambiaron los encabezados del Excel. El mensaje lista las columnas que sí encontró. |
 
-## Notas de robustez
+### Notas de robustez
 
 - Los encabezados se detectan solos (la hoja de diferencias tiene un título en la
   primera fila), y las columnas se buscan sin distinguir tildes, mayúsculas ni saltos
