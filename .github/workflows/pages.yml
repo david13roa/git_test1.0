@@ -39,7 +39,7 @@ jobs:
           mkdir -p sitio
           # El lector de Excel queda incrustado dentro del propio index.html:
           # sin peticiones que una red corporativa pueda bloquear.
-          python tablero/construir.py --vacio -o sitio/index.html
+          python tablero/construir.py --vacio --incrustar-lector -o sitio/index.html
           cp tablero/vendor/LICENSE-xlsx.txt sitio/
 
       - name: Verificar que no se publiquen datos

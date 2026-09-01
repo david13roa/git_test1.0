@@ -29,7 +29,8 @@ LECTOR = RAIZ / "vendor" / "xlsx.full.min.js"
 EXCLUSIONES = RAIZ.parent / "exclusiones.json"
 
 
-def construir(datos: str, plantilla: Path, salida: Path) -> None:
+def construir(datos: str, plantilla: Path, salida: Path,
+              incrustar_lector: bool = False) -> None:
     html = plantilla.read_text(encoding="utf-8")
     if MARCA not in html:
         raise SystemExit(f"La plantilla {plantilla} no tiene la marca {MARCA}.")
@@ -44,9 +45,11 @@ def construir(datos: str, plantilla: Path, salida: Path) -> None:
             reglas = lista[1:-1]  # el marcador ya esta entre corchetes
     html = html.replace(MARCA_EXCLUSIONES, reglas)
 
-    # El lector de Excel se incrusta en la pagina. Asi no hay peticion que una red
-    # corporativa pueda bloquear, ni ruta relativa que se pueda romper.
-    if LECTOR.exists():
+    # El lector se incrusta solo cuando se pide. Conviene para GitHub Pages, donde
+    # la red del usuario puede filtrar la descarga; no para publicarlo como Artifact,
+    # porque la libreria trae miles de caracteres U+FFFD en sus tablas de codificacion
+    # heredadas y ese servicio los rechaza (alli el CDN si esta disponible).
+    if incrustar_lector and LECTOR.exists():
         codigo = LECTOR.read_text(encoding="utf-8")
         if "</script" in codigo.lower():
             raise SystemExit("El lector contiene '</script' y no se puede incrustar tal cual.")
@@ -62,6 +65,9 @@ def main(argv=None) -> int:
     p.add_argument("datos", type=Path, nargs="?", help="JSON generado por preparar_datos_web.py")
     p.add_argument("--excel", type=Path, default=None,
                    help="Excel de origen: prepara los datos y arma el tablero de una vez.")
+    p.add_argument("--incrustar-lector", action="store_true",
+                   help="Mete el lector de Excel dentro del HTML, para que la pagina "
+                        "no dependa de ninguna descarga. Usado al publicar en Pages.")
     p.add_argument("--vacio", action="store_true",
                    help="Arma el tablero SIN datos: cada quien carga su Excel en el "
                         "navegador. Es la version que se publica en GitHub Pages.")
@@ -83,7 +89,7 @@ def main(argv=None) -> int:
         raise SystemExit("Indique el JSON de datos, use --excel con el archivo original, "
                          "o --vacio para la version de GitHub Pages.")
 
-    construir(datos, args.plantilla, args.salida)
+    construir(datos, args.plantilla, args.salida, args.incrustar_lector)
     peso = args.salida.stat().st_size / 1024
     print(f"Tablero {'vacio ' if args.vacio else ''}listo: {args.salida.resolve()} "
           f"({peso/1024:.2f} MB)" if peso > 1024 else
