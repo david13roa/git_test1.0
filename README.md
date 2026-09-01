@@ -1,16 +1,96 @@
-# Diferencias de despacho por picker
+# Diferencias de despacho de cava
 
-Dos herramientas sobre el mismo análisis:
+Control de las diferencias de inventario de la **cava**: solo los cuadrantes
+**CONGELADOS**, **NEVERA** y **FRUVER NEVERA**. Los demás cuadrantes se descartan
+al leer el archivo, así que ningún número de este proyecto los incluye.
 
-1. **Tablero web interactivo** — se abre con un link, no requiere instalar nada.
-2. **Informe en Excel** — un programa de consola que genera el libro con todas las hojas.
+Responde tres preguntas: qué picker tiene diferencias en cada tienda, cuánto cuesta
+exactamente, y quiénes son los que más pérdida generan.
 
-Ambos responden lo mismo: qué picker tiene diferencias en cada tienda, el valor
-exacto, y el ranking de quiénes generan más costo.
+Tres formas de usarlo, sobre el mismo análisis:
+
+| | Para qué | Necesita instalar |
+|---|---|---|
+| **Servidor FastAPI** | Datos centralizados para todo el equipo, con API para otras herramientas. | Python en un equipo (el servidor). |
+| **Tablero web** | Un archivo HTML que corre solo en el navegador. | Nada. |
+| **Informe en Excel** | El libro que se archiva o se envía por correo. | Python. |
+
+> **Por qué solo cava:** la comparación de cuadrantes es exacta, no por coincidencia
+> parcial. `FRUVER` a secas **no** es cava y queda fuera; solo entra `FRUVER NEVERA`.
+> Para analizar otros cuadrantes está la opción `--cuadrantes`, o `--todos-los-cuadrantes`.
 
 ---
 
-## 1. Tablero web
+## 1. Servidor FastAPI
+
+Levanta la API y sirve el tablero desde un solo proceso.
+
+### Arranque
+
+En Windows, doble clic en **`EJECUTAR_SERVIDOR.bat`**: instala lo que falte, abre el
+navegador y deja el servidor corriendo. Desde consola:
+
+```bash
+pip install -r requirements.txt
+uvicorn backend.main:app --host 0.0.0.0 --port 8000
+```
+
+- Tablero: <http://localhost:8000>
+- Documentación interactiva de la API: <http://localhost:8000/docs>
+
+El Excel activo se guarda en `datos/activo.xlsx` y se recarga solo al reiniciar.
+Para empezar, copie ahí el archivo de diferencias, o súbalo por la API.
+
+### Endpoints
+
+| Método y ruta | Qué devuelve |
+|---|---|
+| `GET /` | El tablero interactivo con los datos ya embebidos. |
+| `GET /api/salud` | Si el servicio responde y si hay datos cargados. |
+| `GET /api/meta` | Qué archivo está activo, qué periodo y qué cuadrantes cubre. |
+| `GET /api/filtros` | Pickers, tiendas, cuadrantes, estados y rango de fechas disponibles. |
+| `GET /api/resumen` | Indicadores generales: costo, sobrantes, impacto neto, % atribuido. |
+| `GET /api/pickers` | Ranking con costo por caja, % de entregas con diferencia y % acumulado. |
+| `GET /api/picker-tienda` | Qué picker tiene diferencias en cada tienda y por cuánto. |
+| `GET /api/tiendas` | Ranking de tiendas con el picker que más aporta en cada una. |
+| `GET /api/materiales` | Materiales ordenados por costo de faltantes. |
+| `GET /api/serie-diaria` | Costo por día de despacho. |
+| `GET /api/detalle` | Diferencias línea a línea, paginadas. |
+| `GET /api/datos` | El dataset comprimido que consume el tablero. |
+| `GET /api/informe.xlsx` | Genera y descarga el informe completo en Excel. |
+| `POST /api/cargar` | Reemplaza el dataset activo con un Excel nuevo. |
+
+Todas las consultas aceptan los mismos filtros como parámetros:
+`desde`, `hasta`, `estado`, `picker`, `tienda`, `cuadrante`, `buscar` y `soloCobertura`.
+
+```bash
+# Costo de un picker en el periodo donde sí hay datos de despacho
+curl "http://localhost:8000/api/resumen?picker=URIBE&soloCobertura=true"
+
+# Ranking de agosto en congelados
+curl "http://localhost:8000/api/pickers?desde=2026-08-01&cuadrante=CONGELADOS"
+
+# El informe en Excel de un rango
+curl -o informe.xlsx "http://localhost:8000/api/informe.xlsx?desde=2026-08-19"
+
+# Cargar el archivo del mes nuevo
+curl -X POST -F "archivo=@INFORME_DIFERENCIAS.xlsx" http://localhost:8000/api/cargar
+```
+
+Si el archivo que se sube no sirve, **el que estaba en uso no se toca**: se valida
+completo antes de reemplazarlo.
+
+### Estructura
+
+| Archivo | Qué hace |
+|---|---|
+| `backend/main.py` | Rutas de la API y entrega del tablero. |
+| `backend/almacen.py` | Dataset activo en memoria, persistencia y filtros. |
+| `backend/consultas.py` | Las agregaciones que responde cada endpoint. |
+
+---
+
+## 2. Tablero web
 
 Un solo archivo `.html` que corre **completamente en el navegador**: no hay servidor,
 no hay instalación y los datos nunca salen del equipo de quien lo abre. Funciona
@@ -63,7 +143,7 @@ lector de Excel del botón «Cargar Excel», y ambos degradan sin romper nada.
 
 ---
 
-## 2. Informe en Excel
+## 3. Informe en Excel
 
 Programa en Python que toma el archivo `INFORME_DIFERENCIAS.xlsx` y genera un
 informe en Excel con siete hojas.
@@ -143,6 +223,8 @@ busca el Excel en su propia carpeta; si hay varios, te pregunta cuál usar.
 | `--hoja-despachos` | Hoja con los despachos y el picker. Por defecto `Hoja2`. |
 | `--estado` | `aplica` (por defecto), `sin-pendientes` o `todos`. |
 | `--metrica` | Criterio del ranking: `faltante` (por defecto), `neto` o `absoluto`. |
+| `--cuadrantes` | Cuadrantes a analizar, separados por coma. Por defecto los de cava. |
+| `--todos-los-cuadrantes` | Analiza todos los cuadrantes, sin el recorte de cava. |
 | `--solo-cobertura` | Limita el análisis al periodo y los cuadrantes que cubre la hoja de despachos. |
 | `--desde`, `--hasta` | Rango de fechas `AAAA-MM-DD`. |
 | `--top` | Cuántos pickers mostrar en consola (por defecto 15). |
@@ -194,10 +276,11 @@ Las diferencias cuya entrega no aparece en la hoja de despachos quedan en la hoj
 
 ## Cobertura de los datos
 
-En el archivo de ejemplo, la hoja de diferencias abarca del **1 de julio al 28 de
-agosto** y todos los cuadrantes, mientras que la hoja de despachos solo cubre del
-**19 al 31 de agosto** y los cuadrantes **CONGELADOS** y **NEVERA**. Por eso solo se
-puede asignar picker a una parte de las diferencias.
+En el archivo de ejemplo, las diferencias de cava abarcan del **1 de julio al 28 de
+agosto**, mientras que la hoja de despachos solo cubre del **19 al 31 de agosto** y
+los cuadrantes **CONGELADOS** y **NEVERA**. Por eso solo se puede asignar picker a
+una parte de las diferencias: 14,2 % de las líneas, que son $74,8 millones de los
+$1.278 millones de faltantes.
 
 Con `--solo-cobertura` el análisis se limita a esa ventana, y ahí la atribución sube
 a más de la mitad de las líneas. Para atribuir el resto del periodo hay que ampliar

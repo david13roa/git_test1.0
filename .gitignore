@@ -1,5 +1,12 @@
 __pycache__/
 *.py[cod]
+
+# Datos de la empresa: nunca se versionan
+datos/
+*.xlsx
+!tablero/plantilla.html
+
+# Salidas generadas
 INFORME_PICKERS_*.xlsx
 datos.json
 tablero_diferencias.html

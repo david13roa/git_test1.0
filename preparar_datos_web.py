@@ -20,7 +20,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from informe_diferencias import carga_despachos, carga_diferencias
+from informe_diferencias import (CUADRANTES_CAVA, carga_despachos,
+                                 carga_diferencias, filtra_cuadrantes)
 
 
 # Etiqueta de las diferencias cuya entrega no aparece en la hoja de despachos.
@@ -35,11 +36,19 @@ def indexa(serie: pd.Series) -> tuple[list[str], list[int]]:
     return unicos, [posicion[v] for v in valores]
 
 
-def construye(entrada: Path, hoja_dif, hoja_des) -> dict:
-    diferencias = carga_diferencias(entrada, hoja_dif)
+def construye(entrada: Path, hoja_dif="Hoja1", hoja_des="Hoja2",
+              cuadrantes=CUADRANTES_CAVA) -> dict:
+    """Lee el Excel y devuelve el JSON compacto del tablero."""
+    diferencias = filtra_cuadrantes(carga_diferencias(entrada, hoja_dif), cuadrantes)
     despachos = carga_despachos(entrada, hoja_des)
     df = diferencias.merge(despachos, on="N ENTREGA", how="left")
+    return empaqueta(df, despachos, cuadrantes)
 
+
+def empaqueta(df: pd.DataFrame, despachos: pd.DataFrame,
+              cuadrantes=CUADRANTES_CAVA) -> dict:
+    """Comprime un cruce ya hecho al formato que consume el tablero web."""
+    df = df.copy()
     df["PICKER"] = df["PICKER"].fillna(SIN_CRUCE)
     df["FECHA"] = pd.to_datetime(df["FECHA"], errors="coerce")
     df = df[df["VALOR"].notna()].copy()
@@ -72,7 +81,10 @@ def construye(entrada: Path, hoja_dif, hoja_des) -> dict:
     dias = ((fechas - origen).dt.days).fillna(-1).astype(int).tolist()
 
     # Exposicion por picker: entregas y cajas despachadas en el periodo.
-    despachos["PICKER"] = despachos["PICKER"].fillna(SIN_CRUCE)
+    # Aqui un vacio significa "la planilla no anoto quien fue", que no es lo
+    # mismo que una entrega que ni siquiera aparece en la hoja de despachos.
+    despachos = despachos.copy()
+    despachos["PICKER"] = despachos["PICKER"].fillna("SIN PICKER")
     exposicion = (
         despachos.groupby("PICKER")
         .agg(entregas=("N ENTREGA", "nunique"), cajas=("CAJAS", "sum"))
@@ -88,6 +100,7 @@ def construye(entrada: Path, hoja_dif, hoja_des) -> dict:
 
     return {
         "generado": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M"),
+        "cuadrantesAnalizados": list(cuadrantes),
         "origenFecha": origen.strftime("%Y-%m-%d"),
         "dic": {
             "picker": dic_picker,
@@ -129,9 +142,14 @@ def main(argv=None) -> int:
     p.add_argument("-o", "--salida", type=Path, default=Path("datos.json"))
     p.add_argument("--hoja-diferencias", default="Hoja1")
     p.add_argument("--hoja-despachos", default="Hoja2")
+    p.add_argument("--cuadrantes", default=",".join(CUADRANTES_CAVA),
+                   help=f"Cuadrantes a incluir. Por defecto los de cava: {', '.join(CUADRANTES_CAVA)}.")
+    p.add_argument("--todos-los-cuadrantes", action="store_true")
     args = p.parse_args(argv)
 
-    datos = construye(args.entrada, args.hoja_diferencias, args.hoja_despachos)
+    cuadrantes = () if args.todos_los_cuadrantes else [
+        c.strip() for c in args.cuadrantes.split(",") if c.strip()]
+    datos = construye(args.entrada, args.hoja_diferencias, args.hoja_despachos, cuadrantes)
     args.salida.write_text(json.dumps(datos, separators=(",", ":"), ensure_ascii=False),
                            encoding="utf-8")
     n = len(datos["cols"]["valor"])

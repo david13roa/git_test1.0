@@ -1,4 +1,4 @@
-<title>Control de Diferencias CEDI</title>
+<title>Control de Diferencias Cava</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -58,6 +58,10 @@ button,select,input{font:inherit; color:inherit}
 .marca{display:flex; align-items:baseline; gap:10px; margin-right:auto}
 .marca h1{font-size:17px; font-weight:700}
 .marca .sub{font-size:12px; color:var(--ink-3); letter-spacing:.04em; text-transform:uppercase}
+.marca .alcance{
+  color:var(--falt); border:1px solid var(--falt); border-radius:20px;
+  padding:1px 9px; letter-spacing:.06em; font-weight:600; font-size:10.5px;
+}
 .acciones{display:flex; gap:8px; align-items:center}
 .btn{
   background:var(--surface-2); border:1px solid var(--linea); color:var(--ink);
@@ -204,7 +208,8 @@ tbody tr.pulsable{cursor:pointer}
   <div class="tope-fila">
     <div class="marca">
       <h1>Control de Diferencias</h1>
-      <span class="sub" id="rotuloPeriodo">Despacho CEDI</span>
+      <span class="sub alcance" id="rotuloAlcance">Cava</span>
+      <span class="sub" id="rotuloPeriodo"></span>
     </div>
     <div class="acciones">
       <input type="file" id="archivo" accept=".xlsx,.xlsm,.xls" hidden>
@@ -1147,6 +1152,10 @@ function pintarPie(){
   document.getElementById("pie").innerHTML =
     `Datos procesados el ${esc(D.generado)} · ${N(C.valor.length)} líneas de diferencia · `
     + `${N(DIC.tienda.length)} tiendas · ${N(cob.entregas)} entregas con picker asignado. `
+    + ((D.cuadrantesAnalizados || []).length
+        ? `Alcance: cuadrantes de cava (${esc(D.cuadrantesAnalizados.join(", "))}); `
+          + `los demás cuadrantes quedan fuera del análisis. `
+        : "")
     + `Los faltantes se muestran como costo positivo; el impacto neto descuenta los sobrantes.`;
 }
 </script>
@@ -1178,6 +1187,13 @@ function llenarFiltros(){
   });
   document.getElementById("rotuloPeriodo").textContent =
     fechaLarga(min) + " — " + fechaLarga(max);
+
+  const alcance = document.getElementById("rotuloAlcance");
+  const qs = D.cuadrantesAnalizados || [];
+  alcance.textContent = qs.length ? "Cava" : "Todos los cuadrantes";
+  alcance.title = qs.length
+    ? "Solo se analizan los cuadrantes de cava: " + qs.join(", ")
+    : "Sin filtro de cuadrante";
 
   if (DIC.estado.includes("APLICA")) F.estado = "APLICA";
   else F.estado = "";

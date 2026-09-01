@@ -38,6 +38,11 @@ import pandas as pd
 
 FORMATO_PESOS = '"$"#,##0;[Red]-"$"#,##0'
 
+# La operacion que se controla es la cava: solo estos cuadrantes cuentan.
+# Ojo: "FRUVER" a secas NO es cava, por eso la comparacion es exacta y no por
+# coincidencia parcial (si no, "FRUVER" entraria por estar dentro de "FRUVER NEVERA").
+CUADRANTES_CAVA = ("CONGELADOS", "NEVERA", "FRUVER NEVERA")
+
 
 def normaliza(texto) -> str:
     """Minusculas, sin tildes, sin saltos de linea y sin espacios repetidos."""
@@ -65,6 +70,14 @@ def busca_columna(df: pd.DataFrame, alias: list[str], obligatoria: bool = True):
             f"Columnas disponibles: {list(df.columns)}"
         )
     return None
+
+
+def filtra_cuadrantes(df: pd.DataFrame, cuadrantes) -> pd.DataFrame:
+    """Deja solo los cuadrantes indicados. Con `cuadrantes` vacio no filtra nada."""
+    if not cuadrantes:
+        return df
+    permitidos = {str(c).strip().upper() for c in cuadrantes}
+    return df[df["CUADRANTE"].isin(permitidos)]
 
 
 def a_numero(serie: pd.Series) -> pd.Series:
@@ -359,7 +372,7 @@ def top_materiales(todas: pd.DataFrame, top: int = 100) -> pd.DataFrame:
 
 
 def construye_resumen(datos: Datos, todas: pd.DataFrame, ranking: pd.DataFrame,
-                      estado: str, metrica: str) -> pd.DataFrame:
+                      estado: str, metrica: str, cuadrantes=()) -> pd.DataFrame:
     falt = todas["VALOR"].where(todas["VALOR"] < 0, 0).abs().sum()
     sobr = todas["VALOR"].where(todas["VALOR"] > 0, 0).sum()
     con_p = datos.detalle
@@ -377,6 +390,7 @@ def construye_resumen(datos: Datos, todas: pd.DataFrame, ranking: pd.DataFrame,
 
     filas = [
         ("Periodo analizado", periodo),
+        ("Cuadrantes analizados", ", ".join(cuadrantes) if cuadrantes else "todos"),
         ("Filtro de estado aplicado", estado),
         ("Metrica de ranking", metrica),
         ("Lineas de diferencia analizadas", len(todas)),
@@ -574,6 +588,11 @@ def main(argv=None) -> int:
     p.add_argument("--metrica", default="faltante", choices=["faltante", "neto", "absoluto"],
                    help="Criterio para ordenar el ranking de pickers.")
     p.add_argument("--top", type=int, default=15, help="Cuantos pickers mostrar en consola.")
+    p.add_argument("--cuadrantes", default=",".join(CUADRANTES_CAVA),
+                   help="Cuadrantes a analizar, separados por coma. "
+                        f"Por defecto los de cava: {', '.join(CUADRANTES_CAVA)}.")
+    p.add_argument("--todos-los-cuadrantes", action="store_true",
+                   help="Analiza todos los cuadrantes, no solo los de cava.")
     p.add_argument("--solo-cobertura", action="store_true",
                    help="Analiza unicamente el periodo y los cuadrantes que cubre la hoja de "
                         "despachos, para que los porcentajes por picker sean comparables.")
@@ -596,6 +615,14 @@ def main(argv=None) -> int:
     print(f"Leyendo {args.entrada} ...")
     diferencias = carga_diferencias(args.entrada, hoja_dif)
     despachos = carga_despachos(args.entrada, hoja_des)
+
+    cuadrantes = () if args.todos_los_cuadrantes else [
+        c.strip() for c in args.cuadrantes.split(",") if c.strip()]
+    antes = len(diferencias)
+    diferencias = filtra_cuadrantes(diferencias, cuadrantes)
+    if cuadrantes:
+        print(f"Cuadrantes analizados: {', '.join(cuadrantes)} "
+              f"({len(diferencias):,} de {antes:,} lineas).")
 
     if args.estado == "aplica":
         diferencias = diferencias[diferencias["ESTADO"] == "APLICA"]
@@ -627,7 +654,7 @@ def main(argv=None) -> int:
     todas = pd.concat([datos.detalle, datos.sin_picker], ignore_index=True)
 
     ranking = ranking_pickers(datos, args.metrica)
-    resumen = construye_resumen(datos, todas, ranking, args.estado, args.metrica)
+    resumen = construye_resumen(datos, todas, ranking, args.estado, args.metrica, cuadrantes)
 
     columnas_detalle = [
         "FECHA", "PICKER", "TIENDA", "CECO", "CUADRANTE", "N ENTREGA", "RUTA",
