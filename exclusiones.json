@@ -1,0 +1,21 @@
+{
+  "_comentario": [
+    "Lineas que se excluyen del analisis por ser errores de captura comprobados.",
+    "Una regla saca solo las lineas que coinciden con TODOS los campos que declara,",
+    "asi que entre mas campos, mas estrecha. Los campos disponibles son:",
+    "entrega, material, unidades, tienda, ceco y fecha (la fecha de la LINEA).",
+    "Los campos motivo, reportadoPor y registradoEl son notas, no criterios.",
+    "Todo lo excluido se sigue reportando aparte: nunca desaparece en silencio.",
+    "Para ver los datos crudos: informe_diferencias.py --sin-exclusiones"
+  ],
+  "exclusiones": [
+    {
+      "entrega": "9832115290",
+      "material": 12000395,
+      "unidades": -127453,
+      "motivo": "Cantidad imposible: 127.453 unidades de pizza de 130 g en una sola entrega a una tienda. La siguiente linea mas costosa de toda la cava es 330 veces menor ($2.051.082). Error de captura.",
+      "reportadoPor": "David Roa",
+      "registradoEl": "2026-09-01"
+    }
+  ]
+}

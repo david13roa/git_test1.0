@@ -1,0 +1,1808 @@
+<meta charset="utf-8">
+<title>Control de Diferencias Cava</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  color-scheme: light;
+  --ground:#eef2f4; --surface:#ffffff; --surface-2:#f6f8f9; --linea:#dbe3e7;
+  --linea-fuerte:#c2ced5;
+  --ink:#0e1519; --ink-2:#54666f; --ink-3:#8399a4;
+  --falt:#2a78d6; --sobr:#eb6834; --alerta:#c53434; --ok:#12805c;
+  --s100:#cde2fb; --s200:#9ec5f4; --s300:#6da7ec; --s400:#3987e5; --s500:#256abf; --s600:#184f95; --s700:#0d366b;
+  --sombra:0 1px 2px rgba(14,21,25,.06), 0 1px 8px rgba(14,21,25,.04);
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --ground:#0d1114; --surface:#161c20; --surface-2:#1c2429; --linea:#2a343a;
+    --linea-fuerte:#3d4a52;
+    --ink:#f2f6f8; --ink-2:#a3b4bd; --ink-3:#74868f;
+    --falt:#3987e5; --sobr:#d95926; --alerta:#e66767; --ok:#31a37c;
+    --s100:#0d366b; --s200:#184f95; --s300:#256abf; --s400:#3987e5; --s500:#6da7ec; --s600:#9ec5f4; --s700:#cde2fb;
+    --sombra:0 1px 2px rgba(0,0,0,.4), 0 2px 12px rgba(0,0,0,.25);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --ground:#0d1114; --surface:#161c20; --surface-2:#1c2429; --linea:#2a343a;
+  --linea-fuerte:#3d4a52;
+  --ink:#f2f6f8; --ink-2:#a3b4bd; --ink-3:#74868f;
+  --falt:#3987e5; --sobr:#d95926; --alerta:#e66767; --ok:#31a37c;
+  --s100:#0d366b; --s200:#184f95; --s300:#256abf; --s400:#3987e5; --s500:#6da7ec; --s600:#9ec5f4; --s700:#cde2fb;
+  --sombra:0 1px 2px rgba(0,0,0,.4), 0 2px 12px rgba(0,0,0,.25);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3{font-family:Archivo,-apple-system,"Segoe UI",sans-serif; margin:0; text-wrap:balance; letter-spacing:-.01em}
+.num{font-variant-numeric:tabular-nums}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
+button,select,input{font:inherit; color:inherit}
+:focus-visible{outline:2px solid var(--falt); outline-offset:2px; border-radius:4px}
+
+/* ---------- encabezado ---------- */
+.tope{
+  position:sticky; top:0; z-index:40; background:var(--surface);
+  border-bottom:1px solid var(--linea);
+}
+.tope-fila{
+  max-width:1440px; margin:0 auto; padding:12px 20px;
+  display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+}
+.marca{display:flex; align-items:baseline; gap:10px; margin-right:auto}
+.marca h1{font-size:17px; font-weight:700}
+.marca .sub{font-size:12px; color:var(--ink-3); letter-spacing:.04em; text-transform:uppercase}
+.marca .alcance{
+  color:var(--falt); border:1px solid var(--falt); border-radius:20px;
+  padding:1px 9px; letter-spacing:.06em; font-weight:600; font-size:10.5px;
+}
+.acciones{display:flex; gap:8px; align-items:center}
+.btn{
+  background:var(--surface-2); border:1px solid var(--linea); color:var(--ink);
+  padding:7px 13px; border-radius:7px; cursor:pointer; font-size:13px; font-weight:500;
+  display:inline-flex; align-items:center; gap:7px; transition:border-color .12s, background .12s;
+}
+.btn:hover{border-color:var(--linea-fuerte); background:var(--surface)}
+.btn-fuerte{background:var(--falt); border-color:var(--falt); color:#fff}
+.btn-fuerte:hover{background:var(--s500); border-color:var(--s500)}
+
+/* ---------- filtros ---------- */
+.filtros{
+  max-width:1440px; margin:0 auto; padding:0 20px 12px;
+  display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;
+}
+.campo{display:flex; flex-direction:column; gap:4px; min-width:0}
+.campo label{
+  font-size:10.5px; font-weight:600; color:var(--ink-3);
+  text-transform:uppercase; letter-spacing:.07em;
+}
+.campo select,.campo input{
+  background:var(--surface-2); border:1px solid var(--linea); border-radius:7px;
+  padding:6px 9px; font-size:13px; min-width:120px; max-width:190px;
+}
+.campo input[type="date"]{min-width:132px}
+.interruptor{
+  display:flex; align-items:center; gap:7px; padding:7px 11px;
+  background:var(--surface-2); border:1px solid var(--linea); border-radius:7px;
+  cursor:pointer; font-size:13px; user-select:none; white-space:nowrap;
+}
+.interruptor input{accent-color:var(--falt); margin:0}
+.limpiar{
+  background:none; border:none; color:var(--falt); cursor:pointer;
+  font-size:13px; font-weight:500; padding:7px 4px; text-decoration:underline;
+  text-underline-offset:3px;
+}
+
+/* ---------- pestañas ---------- */
+.pestanas{max-width:1440px; margin:0 auto; padding:0 20px; display:flex; gap:2px; overflow-x:auto}
+.pestana{
+  background:none; border:none; border-bottom:2px solid transparent;
+  padding:9px 14px; cursor:pointer; color:var(--ink-2); font-size:13.5px; font-weight:500;
+  white-space:nowrap;
+}
+.pestana:hover{color:var(--ink)}
+.pestana[aria-selected="true"]{color:var(--ink); border-bottom-color:var(--falt); font-weight:600}
+
+/* ---------- contenido ---------- */
+main{max-width:1440px; margin:0 auto; padding:20px}
+.vista{display:none; flex-direction:column; gap:16px}
+.vista.activa{display:flex}
+
+.aviso{
+  display:flex; gap:11px; align-items:flex-start; padding:12px 14px;
+  background:var(--surface); border:1px solid var(--linea); border-left:3px solid var(--alerta);
+  border-radius:var(--r); font-size:13px; color:var(--ink-2);
+}
+.aviso strong{color:var(--ink); font-weight:600}
+.aviso.dato{border-left-color:var(--ink-3)}
+.aviso + .aviso{margin-top:10px}
+.aviso details summary{cursor:pointer; color:var(--falt); font-weight:500}
+.aviso details ul{margin:8px 0 0; padding-left:18px}
+.aviso details li{margin-bottom:3px}
+
+/* KPI */
+.kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(178px,1fr)); gap:12px}
+.kpi{
+  background:var(--surface); border:1px solid var(--linea); border-radius:var(--r);
+  padding:14px 16px; box-shadow:var(--sombra); display:flex; flex-direction:column; gap:3px;
+}
+.kpi .et{font-size:10.5px; font-weight:600; color:var(--ink-3); text-transform:uppercase; letter-spacing:.07em}
+.kpi .val{font-family:Archivo,sans-serif; font-size:27px; font-weight:600; line-height:1.15; letter-spacing:-.02em}
+.kpi .pie{font-size:12px; color:var(--ink-3)}
+.kpi.destacado{grid-column:span 2}
+.kpi.destacado .val{font-size:40px; color:var(--falt)}
+@media (max-width:640px){ .kpi.destacado{grid-column:span 1} .kpi.destacado .val{font-size:30px} }
+
+/* tarjetas */
+.rejilla{display:grid; gap:16px}
+.rejilla.dos{grid-template-columns:1fr 1fr}
+@media (max-width:980px){ .rejilla.dos{grid-template-columns:1fr} }
+.tarjeta{
+  background:var(--surface); border:1px solid var(--linea); border-radius:var(--r);
+  box-shadow:var(--sombra); padding:16px 18px; min-width:0;
+}
+.tarjeta-tope{display:flex; align-items:baseline; gap:10px; margin-bottom:2px; flex-wrap:wrap}
+.tarjeta h2{font-size:14.5px; font-weight:600}
+.tarjeta .nota{font-size:12px; color:var(--ink-3); margin:0 0 12px}
+.leyenda{display:flex; gap:14px; margin-left:auto; font-size:12px; color:var(--ink-2)}
+.leyenda span{display:flex; align-items:center; gap:5px}
+.punto{width:9px; height:9px; border-radius:2px; display:inline-block}
+
+.grafico{width:100%; overflow-x:auto}
+.grafico svg{display:block; max-width:100%}
+.vacio{padding:40px 12px; text-align:center; color:var(--ink-3); font-size:13px}
+
+/* tablas */
+.tabla-caja{overflow-x:auto; border:1px solid var(--linea); border-radius:var(--r); background:var(--surface)}
+table{border-collapse:collapse; width:100%; font-size:13px}
+thead th{
+  position:sticky; top:0; background:var(--surface-2); z-index:1;
+  text-align:left; padding:9px 12px; font-size:10.5px; font-weight:600; color:var(--ink-3);
+  text-transform:uppercase; letter-spacing:.06em; border-bottom:1px solid var(--linea);
+  white-space:nowrap;
+}
+thead th.n{text-align:right}
+tbody td{padding:8px 12px; border-bottom:1px solid var(--linea); white-space:nowrap}
+tbody td.n{text-align:right; font-variant-numeric:tabular-nums}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:var(--surface-2)}
+tbody tr.pulsable{cursor:pointer}
+.chip{
+  display:inline-block; padding:1px 7px; border-radius:20px; font-size:11px; font-weight:500;
+  border:1px solid var(--linea-fuerte); color:var(--ink-2);
+}
+.chip.falt{border-color:var(--falt); color:var(--falt)}
+.chip.sobr{border-color:var(--sobr); color:var(--sobr)}
+.barra-celda{position:relative; min-width:110px}
+.barra-celda i{
+  position:absolute; left:0; top:50%; transform:translateY(-50%);
+  height:16px; background:var(--s100); border-radius:0 3px 3px 0; z-index:0;
+}
+.barra-celda span{position:relative; z-index:1}
+.puesto{color:var(--ink-3); font-variant-numeric:tabular-nums; width:26px}
+
+.paginacion{
+  display:flex; align-items:center; gap:10px; justify-content:flex-end;
+  padding:10px 2px 0; font-size:13px; color:var(--ink-2);
+}
+
+/* tooltip */
+#tip{
+  position:fixed; pointer-events:none; z-index:100; opacity:0; transition:opacity .1s;
+  background:var(--surface); border:1px solid var(--linea-fuerte); border-radius:8px;
+  padding:9px 11px; box-shadow:0 4px 20px rgba(0,0,0,.16); font-size:12.5px; max-width:290px;
+}
+#tip .t{font-weight:600; margin-bottom:3px; color:var(--ink)}
+#tip .r{display:flex; justify-content:space-between; gap:16px; color:var(--ink-2)}
+#tip .r b{font-weight:600; color:var(--ink); font-variant-numeric:tabular-nums}
+
+.pie-pagina{
+  max-width:1440px; margin:0 auto; padding:22px 20px 34px;
+  color:var(--ink-3); font-size:12px; border-top:1px solid var(--linea); margin-top:22px;
+}
+/* pantalla inicial cuando todavia no hay datos */
+.oculto{display:none!important}
+.bienvenida{max-width:640px; margin:0 auto; padding:56px 20px 40px; text-align:center}
+.bienvenida h2{font-size:24px; font-weight:700; margin-bottom:10px}
+.bienvenida p{color:var(--ink-2); margin:0 auto 26px; max-width:52ch; line-height:1.6}
+.soltar{
+  border:2px dashed var(--linea-fuerte); border-radius:14px; background:var(--surface);
+  padding:44px 24px; cursor:pointer; transition:border-color .15s, background .15s;
+}
+.soltar:hover,.soltar.encima{border-color:var(--falt); background:var(--surface-2)}
+.soltar .icono{font-size:32px; line-height:1; margin-bottom:12px}
+.soltar strong{display:block; font-size:15px; margin-bottom:4px}
+.soltar span{color:var(--ink-3); font-size:13px}
+.bienvenida .privacidad{
+  margin-top:22px; font-size:12.5px; color:var(--ink-3); display:flex;
+  gap:8px; align-items:flex-start; text-align:left; justify-content:center;
+}
+.recordar{
+  display:inline-flex; align-items:center; gap:8px; margin-top:20px;
+  font-size:13px; color:var(--ink-2); cursor:pointer; user-select:none;
+}
+.recordar input{accent-color:var(--falt); margin:0}
+.error-carga{
+  margin-top:18px; padding:11px 14px; border-radius:8px; text-align:left;
+  border:1px solid var(--alerta); border-left-width:3px; color:var(--ink-2); font-size:13px;
+}
+
+@media (prefers-reduced-motion:reduce){ *{transition:none!important; animation:none!important} }
+</style>
+
+<header class="tope">
+  <div class="tope-fila">
+    <div class="marca">
+      <h1>Control de Diferencias</h1>
+      <span class="sub alcance" id="rotuloAlcance">Cava</span>
+      <span class="sub" id="rotuloPeriodo"></span>
+    </div>
+    <div class="acciones">
+      <input type="file" id="archivo" accept=".xlsx,.xlsm,.xls" hidden>
+      <button class="btn" id="btnCargar" title="Procesar un Excel nuevo sin salir de esta página">Cargar Excel</button>
+      <button class="btn" id="btnCsv" title="Descargar lo que está en pantalla">Exportar CSV</button>
+      <button class="btn" id="btnTema" title="Cambiar entre tema claro y oscuro" aria-label="Cambiar tema">Tema</button>
+    </div>
+  </div>
+
+  <div class="filtros" id="filtros">
+    <div class="campo">
+      <label for="fDesde">Desde</label>
+      <input type="date" id="fDesde">
+    </div>
+    <div class="campo">
+      <label for="fHasta">Hasta</label>
+      <input type="date" id="fHasta">
+    </div>
+    <div class="campo">
+      <label for="fEstado">Estado</label>
+      <select id="fEstado"></select>
+    </div>
+    <div class="campo">
+      <label for="fPicker">Picker</label>
+      <select id="fPicker"></select>
+    </div>
+    <div class="campo">
+      <label for="fTienda">Tienda</label>
+      <select id="fTienda"></select>
+    </div>
+    <div class="campo">
+      <label for="fCuadrante">Cuadrante</label>
+      <select id="fCuadrante"></select>
+    </div>
+    <div class="campo">
+      <label for="fBuscar">Buscar material</label>
+      <input type="search" id="fBuscar" placeholder="nombre o código">
+    </div>
+    <label class="interruptor" title="Limita el análisis al periodo y los cuadrantes donde sí hay datos de picker">
+      <input type="checkbox" id="fCobertura"> Solo con picker asignable
+    </label>
+    <button class="limpiar" id="btnLimpiar">Limpiar filtros</button>
+  </div>
+
+  <div class="pestanas" id="pestanas" role="tablist">
+    <button class="pestana" role="tab" data-vista="panorama" aria-selected="true">Panorama</button>
+    <button class="pestana" role="tab" data-vista="pickers" aria-selected="false">Pickers</button>
+    <button class="pestana" role="tab" data-vista="tiendas" aria-selected="false">Tiendas</button>
+    <button class="pestana" role="tab" data-vista="materiales" aria-selected="false">Materiales</button>
+    <button class="pestana" role="tab" data-vista="detalle" aria-selected="false">Detalle</button>
+  </div>
+</header>
+
+<section class="bienvenida" id="bienvenida">
+  <h2>Control de diferencias de cava</h2>
+  <p>
+    Cargue el Excel de diferencias y el tablero arma el análisis completo: quién
+    genera las diferencias, en qué tienda y cuánto cuesta. Solo se analizan los
+    cuadrantes de cava (congelados, nevera y fruver nevera).
+  </p>
+  <div class="soltar" id="zonaSoltar" role="button" tabindex="0"
+       aria-label="Seleccionar o soltar el archivo de Excel">
+    <div class="icono" aria-hidden="true">📥</div>
+    <strong>Suelte aquí el archivo, o haga clic para buscarlo</strong>
+    <span>Excel con la hoja de diferencias y la hoja de despachos (.xlsx)</span>
+  </div>
+  <label class="recordar">
+    <input type="checkbox" id="recordar">
+    Recordar los datos en este navegador
+  </label>
+  <div class="privacidad">
+    <span aria-hidden="true">🔒</span>
+    <span>El archivo se procesa en su navegador y no se envía a ningún servidor.
+    Si marca «recordar», los datos quedan guardados en este equipo hasta que los borre.</span>
+  </div>
+  <div id="errorCarga"></div>
+</section>
+
+<main id="tablero" class="oculto">
+  <div id="avisoCobertura"></div>
+
+  <section class="vista activa" id="vista-panorama">
+    <div class="kpis" id="kpis"></div>
+    <div class="rejilla dos">
+      <div class="tarjeta">
+        <div class="tarjeta-tope"><h2>Costo de faltantes por día</h2></div>
+        <p class="nota">Cuánto cuesta cada jornada de despacho. Pase el cursor para ver el día.</p>
+        <div class="grafico" id="gTendencia"></div>
+      </div>
+      <div class="tarjeta">
+        <div class="tarjeta-tope">
+          <h2>Faltantes y sobrantes por picker</h2>
+          <div class="leyenda">
+            <span><i class="punto" style="background:var(--falt)"></i>Faltantes</span>
+            <span><i class="punto" style="background:var(--sobr)"></i>Sobrantes</span>
+          </div>
+        </div>
+        <p class="nota">Un sobrante también es un error de picking, aunque no cueste plata.</p>
+        <div class="grafico" id="gDoble"></div>
+      </div>
+    </div>
+    <div class="tarjeta">
+      <div class="tarjeta-tope"><h2>Ranking de pickers por costo</h2></div>
+      <p class="nota">Haga clic en una barra para filtrar todo el tablero por ese picker.</p>
+      <div class="grafico" id="gPickers"></div>
+    </div>
+  </section>
+
+  <section class="vista" id="vista-pickers">
+    <div class="tarjeta">
+      <div class="tarjeta-tope"><h2>Quién genera las diferencias</h2></div>
+      <p class="nota">
+        El costo por caja y el porcentaje de entregas con diferencia son los indicadores justos
+        para comparar: un picker que despacha más tiene más oportunidades de fallar.
+        Haga clic en una fila para filtrar por ese picker.
+      </p>
+      <div class="tabla-caja"><table id="tPickers"></table></div>
+    </div>
+    <div class="tarjeta">
+      <div class="tarjeta-tope"><h2>Dónde falla cada picker</h2></div>
+      <p class="nota">
+        Costo de faltantes por picker y tienda. Entre más oscura la celda, más caro.
+        Solo pickers identificados; las líneas sin cruce de despacho quedan fuera.
+      </p>
+      <div class="grafico" id="gMatriz"></div>
+    </div>
+    <div class="tarjeta">
+      <div class="tarjeta-tope"><h2>Detalle picker por tienda</h2></div>
+      <p class="nota">El valor exacto de cada combinación, ordenado por costo. Excluye las líneas sin cruce de despacho.</p>
+      <div class="tabla-caja"><table id="tPickerTienda"></table></div>
+      <div class="paginacion" id="pPickerTienda"></div>
+    </div>
+  </section>
+
+  <section class="vista" id="vista-tiendas">
+    <div class="tarjeta">
+      <div class="tarjeta-tope"><h2>Tiendas con mayor impacto</h2></div>
+      <p class="nota">Haga clic en una barra para filtrar el tablero por esa tienda.</p>
+      <div class="grafico" id="gTiendas"></div>
+    </div>
+    <div class="tarjeta">
+      <div class="tarjeta-tope"><h2>Todas las tiendas</h2></div>
+      <p class="nota">Con el picker que más aporta al costo en cada una.</p>
+      <div class="tabla-caja"><table id="tTiendas"></table></div>
+      <div class="paginacion" id="pTiendas"></div>
+    </div>
+  </section>
+
+  <section class="vista" id="vista-materiales">
+    <div class="tarjeta">
+      <div class="tarjeta-tope"><h2>Materiales que más se pierden</h2></div>
+      <p class="nota">Concentrar el control en estas referencias rinde más que revisarlo todo.</p>
+      <div class="grafico" id="gMateriales"></div>
+    </div>
+    <div class="tarjeta">
+      <div class="tarjeta-tope"><h2>Listado de materiales</h2></div>
+      <p class="nota">Ordenado por costo de faltantes.</p>
+      <div class="tabla-caja"><table id="tMateriales"></table></div>
+      <div class="paginacion" id="pMateriales"></div>
+    </div>
+  </section>
+
+  <section class="vista" id="vista-detalle">
+    <div class="tarjeta">
+      <div class="tarjeta-tope"><h2>Línea a línea</h2></div>
+      <p class="nota" id="notaDetalle"></p>
+      <div class="tabla-caja"><table id="tDetalle"></table></div>
+      <div class="paginacion" id="pDetalle"></div>
+    </div>
+  </section>
+</main>
+
+<footer class="pie-pagina oculto" id="pie"></footer>
+<div id="tip" role="tooltip"></div>
+
+<script id="datosCrudos" type="application/json">/*__DATOS__*/</script>
+<script>
+"use strict";
+
+/* ===================== datos y utilidades ===================== */
+
+/* El tablero se publica de dos maneras: con los datos ya incrustados, o vacio
+   para que cada quien cargue su Excel. Por eso todo arranca en null. */
+let D = null, C = null, DIC = null, ORIGEN = null;
+const CLAVE_GUARDADO = "diferenciasCava:datos";
+
+function leerIncrustados(){
+  const bruto = document.getElementById("datosCrudos").textContent.trim();
+  if (!bruto || bruto.startsWith("/*")) return null;
+  try {
+    const p = JSON.parse(bruto);
+    return (p && p.cols && p.cols.valor && p.cols.valor.length) ? p : null;
+  } catch (e) { return null; }
+}
+
+const pesos = new Intl.NumberFormat("es-CO", {style:"currency", currency:"COP", maximumFractionDigits:0});
+const entero = new Intl.NumberFormat("es-CO");
+const $ = v => pesos.format(v || 0);
+const N = v => entero.format(Math.round(v || 0));
+
+function corto(v){
+  const a = Math.abs(v || 0);
+  if (a >= 1e6){
+    const m = v / 1e6;
+    return "$" + entero.format(Math.abs(m) >= 100 ? Math.round(m) : +m.toFixed(1)) + " M";
+  }
+  if (a >= 1e3) return "$" + entero.format(Math.round(v/1e3)) + " K";
+  return $(v);
+}
+function fechaDe(dia){ const d = new Date(ORIGEN); d.setDate(d.getDate() + dia); return d; }
+function iso(d){ return d.toISOString().slice(0,10); }
+function fechaLarga(d){
+  return d.toLocaleDateString("es-CO", {day:"numeric", month:"short", year:"numeric"});
+}
+function esc(s){
+  return String(s ?? "").replace(/[&<>"']/g, c =>
+    ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+/* ===================== estado de los filtros ===================== */
+
+const F = {desde:null, hasta:null, estado:"APLICA", picker:"", tienda:"", cuadrante:"",
+           buscar:"", cobertura:false};
+const PAG = {pickerTienda:1, tiendas:1, materiales:1, detalle:1};
+const PORPAG = 40;
+let VISTA = "panorama";
+
+/* Indices calculados una sola vez por combinación de filtros. */
+let cacheFiltro = null, cacheLlave = "";
+
+function llaveFiltro(){ return JSON.stringify(F); }
+
+function indicesFiltrados(){
+  const llave = llaveFiltro();
+  if (llave === cacheLlave && cacheFiltro) return cacheFiltro;
+
+  const total = C.valor.length;
+  const iEstado  = F.estado    ? DIC.estado.indexOf(F.estado)       : -1;
+  const iPicker  = F.picker    ? DIC.picker.indexOf(F.picker)       : -1;
+  const iTienda  = F.tienda    ? DIC.tienda.indexOf(F.tienda)       : -1;
+  const iCuad    = F.cuadrante ? DIC.cuadrante.indexOf(F.cuadrante) : -1;
+
+  let dDesde = -Infinity, dHasta = Infinity;
+  if (F.desde) dDesde = Math.round((new Date(F.desde+"T00:00:00") - ORIGEN) / 86400000);
+  if (F.hasta) dHasta = Math.round((new Date(F.hasta+"T00:00:00") - ORIGEN) / 86400000);
+
+  let cubDesde = -Infinity, cubHasta = Infinity, cuadPermitidos = null;
+  if (F.cobertura && D.cobertura.despachoDesde){
+    cubDesde = Math.round((new Date(D.cobertura.despachoDesde+"T00:00:00") - ORIGEN) / 86400000);
+    cubHasta = Math.round((new Date(D.cobertura.despachoHasta+"T00:00:00") - ORIGEN) / 86400000);
+    cuadPermitidos = new Set();
+    DIC.cuadrante.forEach((nombre, i) => {
+      if (D.cobertura.cuadrantes.some(q => nombre.includes(q))) cuadPermitidos.add(i);
+    });
+  }
+
+  const texto = F.buscar.trim().toLowerCase();
+  let materialesOk = null;
+  if (texto){
+    materialesOk = new Set();
+    DIC.materialDesc.forEach((desc, i) => {
+      if (desc.toLowerCase().includes(texto) ||
+          String(DIC.materialCodigo[i]).includes(texto)) materialesOk.add(i);
+    });
+  }
+
+  const salida = [];
+  for (let i = 0; i < total; i++){
+    const dia = C.dia[i];
+    if (dia < dDesde || dia > dHasta) continue;
+    if (iEstado >= 0 && C.estado[i] !== iEstado) continue;
+    if (iPicker >= 0 && C.picker[i] !== iPicker) continue;
+    if (iTienda >= 0 && C.tienda[i] !== iTienda) continue;
+    if (iCuad   >= 0 && C.cuadrante[i] !== iCuad) continue;
+    if (cuadPermitidos && (dia < cubDesde || dia > cubHasta || !cuadPermitidos.has(C.cuadrante[i]))) continue;
+    if (materialesOk && !materialesOk.has(C.material[i])) continue;
+    salida.push(i);
+  }
+  cacheFiltro = salida; cacheLlave = llave;
+  return salida;
+}
+
+/* ===================== agregación ===================== */
+
+function nuevoAcum(){
+  return {lineas:0, falt:0, sobr:0, uFalt:0, uSobr:0,
+          tiendas:new Set(), entregas:new Set(), materiales:new Set()};
+}
+function sumar(a, i){
+  const v = C.valor[i], u = C.unidades[i];
+  a.lineas++;
+  if (v < 0){ a.falt -= v; } else { a.sobr += v; }
+  if (u < 0){ a.uFalt -= u; } else { a.uSobr += u; }
+  a.tiendas.add(C.tienda[i]);
+  a.materiales.add(C.material[i]);
+  if (C.entrega[i]) a.entregas.add(C.entrega[i]);
+}
+function agrupar(indices, columna){
+  const mapa = new Map();
+  for (const i of indices){
+    const k = C[columna][i];
+    let a = mapa.get(k);
+    if (!a){ a = nuevoAcum(); mapa.set(k, a); }
+    sumar(a, i);
+  }
+  return mapa;
+}
+function totales(indices){
+  const a = nuevoAcum();
+  for (const i of indices) sumar(a, i);
+  return a;
+}
+
+const SIN_CRUCE = "SIN CRUCE DE DESPACHO";
+/* Se resuelve en activar(): al cargar la pagina puede que todavia no haya datos. */
+let ID_SIN_PICKER = -1;
+
+function rankingPickers(indices){
+  const mapa = agrupar(indices, "picker");
+  const filas = [];
+  for (const [k, a] of mapa){
+    const nombre = DIC.picker[k];
+    const exp = D.exposicion[nombre] || {entregas:0, cajas:0};
+    filas.push({
+      id:k, nombre, sinPicker:k === ID_SIN_PICKER,
+      lineas:a.lineas, falt:a.falt, sobr:a.sobr, neto:a.sobr - a.falt, abs:a.falt + a.sobr,
+      uFalt:a.uFalt, uSobr:a.uSobr,
+      tiendas:a.tiendas.size, entregasDif:a.entregas.size,
+      entregas:exp.entregas, cajas:exp.cajas,
+      pctEntregas: exp.entregas ? 100 * a.entregas.size / exp.entregas : null,
+      porCaja: exp.cajas ? a.falt / exp.cajas : null,
+    });
+  }
+  /* La fila sin cruce no es un picker: no compite en el ranking ni entra en la base
+     del porcentaje, pero se muestra al final para que ningun peso quede escondido. */
+  filas.sort((x, y) => (x.sinPicker - y.sinPicker) || (y.falt - x.falt));
+  const base = filas.filter(f => !f.sinPicker).reduce((s, f) => s + f.falt, 0);
+  let acum = 0, puesto = 0;
+  filas.forEach(f => {
+    if (f.sinPicker){ f.puesto = null; f.pct = null; f.acum = null; return; }
+    f.puesto = ++puesto;
+    f.pct = base ? 100 * f.falt / base : 0;
+    acum += f.pct; f.acum = acum;
+  });
+  return filas;
+}
+
+function rankingPor(indices, columna, diccionario){
+  const mapa = agrupar(indices, columna);
+  const filas = [];
+  for (const [k, a] of mapa){
+    filas.push({id:k, nombre:diccionario[k], lineas:a.lineas, falt:a.falt, sobr:a.sobr,
+                neto:a.sobr - a.falt, uFalt:a.uFalt, uSobr:a.uSobr,
+                tiendas:a.tiendas.size, materiales:a.materiales.size});
+  }
+  filas.sort((x, y) => y.falt - x.falt);
+  filas.forEach((f, i) => f.puesto = i + 1);
+  return filas;
+}
+
+function serieDiaria(indices){
+  const mapa = new Map();
+  for (const i of indices){
+    const d = C.dia[i];
+    if (d < 0) continue;
+    let a = mapa.get(d);
+    if (!a){ a = {falt:0, sobr:0, lineas:0}; mapa.set(d, a); }
+    const v = C.valor[i];
+    if (v < 0) a.falt -= v; else a.sobr += v;
+    a.lineas++;
+  }
+  return [...mapa.entries()].sort((a, b) => a[0] - b[0])
+    .map(([dia, a]) => ({dia, fecha:fechaDe(dia), ...a}));
+}
+
+function cruzePickerTienda(indices){
+  const mapa = new Map();
+  for (const i of indices){
+    const k = C.picker[i] + "|" + C.tienda[i];
+    let a = mapa.get(k);
+    if (!a){ a = {picker:C.picker[i], tienda:C.tienda[i], ...nuevoAcum()}; mapa.set(k, a); }
+    sumar(a, i);
+  }
+  const filas = [...mapa.values()].map(a => ({
+    picker:DIC.picker[a.picker], tienda:DIC.tienda[a.tienda],
+    idPicker:a.picker, lineas:a.lineas, falt:a.falt, sobr:a.sobr,
+    neto:a.sobr - a.falt, uFalt:a.uFalt, entregas:a.entregas.size,
+  }));
+  filas.sort((x, y) => y.falt - x.falt);
+  return filas;
+}
+</script>
+
+<script>
+"use strict";
+
+/* ===================== gráficos en SVG ===================== */
+
+const TIP = document.getElementById("tip");
+function verTip(html, ev){
+  TIP.innerHTML = html;
+  TIP.style.opacity = "1";
+  const c = TIP.getBoundingClientRect();
+  let x = ev.clientX + 14, y = ev.clientY + 14;
+  if (x + c.width > innerWidth - 8) x = ev.clientX - c.width - 14;
+  if (y + c.height > innerHeight - 8) y = ev.clientY - c.height - 14;
+  TIP.style.left = Math.max(8, x) + "px";
+  TIP.style.top = Math.max(8, y) + "px";
+}
+function sinTip(){ TIP.style.opacity = "0"; }
+document.addEventListener("scroll", sinTip, true);
+
+const NS = "http://www.w3.org/2000/svg";
+function el(nombre, atributos = {}){
+  const n = document.createElementNS(NS, nombre);
+  for (const k in atributos) n.setAttribute(k, atributos[k]);
+  return n;
+}
+/* Barra con las esquinas redondeadas solo en el extremo libre. */
+function rutaBarra(x, y, ancho, alto, r = 4){
+  const w = Math.max(ancho, 0.5), rr = Math.min(r, w);
+  return `M${x},${y} H${x+w-rr} Q${x+w},${y} ${x+w},${y+rr} V${y+alto-rr} `
+       + `Q${x+w},${y+alto} ${x+w-rr},${y+alto} H${x} Z`;
+}
+function vaciar(caja, mensaje){
+  caja.innerHTML = `<p class="vacio">${esc(mensaje)}</p>`;
+}
+
+/* --- barras horizontales, una sola serie (magnitud) --- */
+function barrasH(caja, items, opciones = {}){
+  caja.innerHTML = "";
+  if (!items.length) return vaciar(caja, "No hay datos con los filtros actuales.");
+
+  const gutter = opciones.gutter || 150;
+  const altoFila = 26, gap = 8, margenDer = 96, margenSup = 8, margenInf = 22;
+  const alto = margenSup + items.length * (altoFila + gap) + margenInf;
+  const ancho = Math.max(caja.clientWidth || 700, 480);
+  const trazo = ancho - gutter - margenDer;
+  const max = Math.max(...items.map(d => d.valor), 1);
+
+  const svg = el("svg", {width:"100%", height:alto, viewBox:`0 0 ${ancho} ${alto}`,
+                         role:"img", "aria-label":opciones.titulo || "Gráfico de barras"});
+
+  /* rejilla discreta */
+  for (let t = 0; t <= 4; t++){
+    const x = gutter + trazo * t / 4;
+    svg.appendChild(el("line", {x1:x, y1:margenSup, x2:x, y2:alto-margenInf,
+                                stroke:"var(--linea)", "stroke-width":1}));
+    const et = el("text", {x, y:alto-6, "text-anchor":t===0?"start":"middle",
+                           fill:"var(--ink-3)", "font-size":10.5});
+    et.textContent = corto(max * t / 4);
+    svg.appendChild(et);
+  }
+
+  items.forEach((d, i) => {
+    const y = margenSup + i * (altoFila + gap);
+    const w = trazo * d.valor / max;
+    const g = el("g", {class:"fila", style:opciones.alPulsar ? "cursor:pointer" : ""});
+
+    const rot = el("text", {x:gutter-10, y:y+altoFila/2+4, "text-anchor":"end",
+                            fill:"var(--ink)", "font-size":12.5});
+    rot.textContent = d.etiqueta.length > 22 ? d.etiqueta.slice(0,21)+"…" : d.etiqueta;
+    g.appendChild(rot);
+
+    g.appendChild(el("path", {d:rutaBarra(gutter, y+4, w, altoFila-8),
+                              fill:d.color || "var(--falt)"}));
+
+    const val = el("text", {x:gutter+w+9, y:y+altoFila/2+4, fill:"var(--ink-2)",
+                            "font-size":12, "font-variant-numeric":"tabular-nums"});
+    val.textContent = corto(d.valor);
+    g.appendChild(val);
+
+    /* zona de hover más grande que la barra */
+    const zona = el("rect", {x:0, y, width:ancho, height:altoFila+gap, fill:"transparent"});
+    zona.addEventListener("mousemove", ev => verTip(d.tip, ev));
+    zona.addEventListener("mouseleave", sinTip);
+    if (opciones.alPulsar){
+      zona.addEventListener("click", () => { sinTip(); opciones.alPulsar(d); });
+    }
+    g.appendChild(zona);
+    svg.appendChild(g);
+  });
+  caja.appendChild(svg);
+}
+
+/* --- dos series por categoría: faltantes y sobrantes --- */
+function barrasDobles(caja, items){
+  caja.innerHTML = "";
+  if (!items.length) return vaciar(caja, "No hay datos con los filtros actuales.");
+
+  const gutter = 108, altoFila = 30, gap = 10, margenDer = 84, margenSup = 8, margenInf = 22;
+  const alto = margenSup + items.length * (altoFila + gap) + margenInf;
+  const ancho = Math.max(caja.clientWidth || 600, 420);
+  const trazo = ancho - gutter - margenDer;
+  const max = Math.max(...items.flatMap(d => [d.falt, d.sobr]), 1);
+  const h = 10; /* dos barras de 10px con 2px de separación */
+
+  const svg = el("svg", {width:"100%", height:alto, viewBox:`0 0 ${ancho} ${alto}`,
+                         role:"img", "aria-label":"Faltantes y sobrantes por picker"});
+  for (let t = 0; t <= 4; t++){
+    const x = gutter + trazo * t / 4;
+    svg.appendChild(el("line", {x1:x, y1:margenSup, x2:x, y2:alto-margenInf,
+                                stroke:"var(--linea)", "stroke-width":1}));
+    const et = el("text", {x, y:alto-6, "text-anchor":t===0?"start":"middle",
+                           fill:"var(--ink-3)", "font-size":10.5});
+    et.textContent = corto(max * t / 4);
+    svg.appendChild(et);
+  }
+
+  items.forEach((d, i) => {
+    const y = margenSup + i * (altoFila + gap);
+    const rot = el("text", {x:gutter-10, y:y+altoFila/2+4, "text-anchor":"end",
+                            fill:"var(--ink)", "font-size":12.5});
+    rot.textContent = d.etiqueta.length > 14 ? d.etiqueta.slice(0,13)+"…" : d.etiqueta;
+    svg.appendChild(rot);
+
+    svg.appendChild(el("path", {d:rutaBarra(gutter, y+3, trazo*d.falt/max, h),
+                                fill:"var(--falt)"}));
+    svg.appendChild(el("path", {d:rutaBarra(gutter, y+3+h+2, trazo*d.sobr/max, h),
+                                fill:"var(--sobr)"}));
+
+    const zona = el("rect", {x:0, y, width:ancho, height:altoFila+gap, fill:"transparent"});
+    zona.addEventListener("mousemove", ev => verTip(
+      `<div class="t">${esc(d.etiqueta)}</div>
+       <div class="r"><span>Faltantes</span><b>${$(d.falt)}</b></div>
+       <div class="r"><span>Sobrantes</span><b>${$(d.sobr)}</b></div>
+       <div class="r"><span>Impacto neto</span><b>${$(d.sobr - d.falt)}</b></div>`, ev));
+    zona.addEventListener("mouseleave", sinTip);
+    svg.appendChild(zona);
+  });
+  caja.appendChild(svg);
+}
+
+/* --- línea de tiempo con área y punto final destacado --- */
+function lineaTiempo(caja, puntos){
+  caja.innerHTML = "";
+  if (puntos.length < 2) return vaciar(caja, "Se necesitan al menos dos días para dibujar la tendencia.");
+
+  const ancho = Math.max(caja.clientWidth || 600, 420);
+  const alto = 240, mIzq = 58, mDer = 16, mSup = 14, mInf = 30;
+  const trazoX = ancho - mIzq - mDer, trazoY = alto - mSup - mInf;
+  const max = Math.max(...puntos.map(p => p.falt), 1);
+  const d0 = puntos[0].dia, d1 = puntos[puntos.length-1].dia;
+  const px = d => mIzq + (d1 === d0 ? trazoX/2 : trazoX * (d - d0) / (d1 - d0));
+  const py = v => mSup + trazoY - trazoY * v / max;
+
+  const svg = el("svg", {width:"100%", height:alto, viewBox:`0 0 ${ancho} ${alto}`,
+                         role:"img", "aria-label":"Costo de faltantes por día"});
+
+  for (let t = 0; t <= 4; t++){
+    const y = mSup + trazoY * t / 4;
+    svg.appendChild(el("line", {x1:mIzq, y1:y, x2:ancho-mDer, y2:y,
+                                stroke:"var(--linea)", "stroke-width":1}));
+    const et = el("text", {x:mIzq-9, y:y+4, "text-anchor":"end", fill:"var(--ink-3)",
+                           "font-size":10.5});
+    et.textContent = corto(max * (4-t) / 4);
+    svg.appendChild(et);
+  }
+
+  const linea = puntos.map((p, i) => (i ? "L" : "M") + px(p.dia) + "," + py(p.falt)).join(" ");
+  const area = `${linea} L${px(d1)},${mSup+trazoY} L${px(d0)},${mSup+trazoY} Z`;
+
+  const grad = el("linearGradient", {id:"gradArea", x1:"0", y1:"0", x2:"0", y2:"1"});
+  grad.appendChild(el("stop", {offset:"0%", "stop-color":"var(--falt)", "stop-opacity":".22"}));
+  grad.appendChild(el("stop", {offset:"100%", "stop-color":"var(--falt)", "stop-opacity":"0"}));
+  const defs = el("defs"); defs.appendChild(grad); svg.appendChild(defs);
+
+  svg.appendChild(el("path", {d:area, fill:"url(#gradArea)"}));
+  svg.appendChild(el("path", {d:linea, fill:"none", stroke:"var(--falt)", "stroke-width":2,
+                              "stroke-linejoin":"round", "stroke-linecap":"round"}));
+
+  const ult = puntos[puntos.length-1];
+  svg.appendChild(el("circle", {cx:px(ult.dia), cy:py(ult.falt), r:5,
+                                fill:"var(--falt)", stroke:"var(--surface)", "stroke-width":2}));
+
+  [puntos[0], ult].forEach((p, i) => {
+    const et = el("text", {x:i ? ancho-mDer : mIzq, y:alto-9,
+                           "text-anchor":i ? "end" : "start", fill:"var(--ink-3)", "font-size":10.5});
+    et.textContent = fechaLarga(p.fecha);
+    svg.appendChild(et);
+  });
+
+  /* crosshair */
+  const guia = el("line", {y1:mSup, y2:mSup+trazoY, stroke:"var(--linea-fuerte)",
+                           "stroke-width":1, opacity:0});
+  const marca = el("circle", {r:5, fill:"var(--falt)", stroke:"var(--surface)",
+                              "stroke-width":2, opacity:0});
+  svg.appendChild(guia); svg.appendChild(marca);
+
+  const captura = el("rect", {x:mIzq, y:mSup, width:trazoX, height:trazoY, fill:"transparent"});
+  captura.addEventListener("mousemove", ev => {
+    const caja2 = svg.getBoundingClientRect();
+    const rel = (ev.clientX - caja2.left) * (ancho / caja2.width);
+    let mejor = puntos[0], dist = Infinity;
+    for (const p of puntos){
+      const dd = Math.abs(px(p.dia) - rel);
+      if (dd < dist){ dist = dd; mejor = p; }
+    }
+    guia.setAttribute("x1", px(mejor.dia)); guia.setAttribute("x2", px(mejor.dia));
+    guia.setAttribute("opacity", 1);
+    marca.setAttribute("cx", px(mejor.dia)); marca.setAttribute("cy", py(mejor.falt));
+    marca.setAttribute("opacity", 1);
+    verTip(`<div class="t">${fechaLarga(mejor.fecha)}</div>
+            <div class="r"><span>Faltantes</span><b>${$(mejor.falt)}</b></div>
+            <div class="r"><span>Sobrantes</span><b>${$(mejor.sobr)}</b></div>
+            <div class="r"><span>Líneas</span><b>${N(mejor.lineas)}</b></div>`, ev);
+  });
+  captura.addEventListener("mouseleave", () => {
+    guia.setAttribute("opacity", 0); marca.setAttribute("opacity", 0); sinTip();
+  });
+  svg.appendChild(captura);
+  caja.appendChild(svg);
+}
+
+/* --- matriz picker x tienda (magnitud, un solo tono) --- */
+const RAMPA = ["--s100","--s200","--s300","--s400","--s500","--s600","--s700"];
+function matriz(caja, filas, pickers, tiendas){
+  caja.innerHTML = "";
+  if (!filas.length) return vaciar(caja, "No hay cruces picker–tienda con los filtros actuales.");
+
+  const celda = new Map();
+  filas.forEach(f => celda.set(f.picker + "|" + f.tienda, f));
+  const max = Math.max(...filas.map(f => f.falt), 1);
+
+  const gutter = 152, anchoCol = 74, altoFila = 26, mSup = 62, mInf = 34;
+  const ancho = gutter + pickers.length * anchoCol + 14;
+  const alto = mSup + tiendas.length * altoFila + mInf;
+
+  const svg = el("svg", {width:ancho, height:alto, viewBox:`0 0 ${ancho} ${alto}`,
+                         role:"img", "aria-label":"Costo por picker y tienda"});
+
+  pickers.forEach((p, j) => {
+    const x = gutter + j * anchoCol + anchoCol/2;
+    const t = el("text", {x, y:mSup-12, "text-anchor":"start", fill:"var(--ink-2)",
+                          "font-size":11.5, transform:`rotate(-42 ${x} ${mSup-12})`});
+    t.textContent = p.length > 12 ? p.slice(0,11)+"…" : p;
+    svg.appendChild(t);
+  });
+
+  tiendas.forEach((tienda, i) => {
+    const y = mSup + i * altoFila;
+    const rot = el("text", {x:gutter-10, y:y+altoFila/2+4, "text-anchor":"end",
+                            fill:"var(--ink)", "font-size":12});
+    rot.textContent = tienda.length > 20 ? tienda.slice(0,19)+"…" : tienda;
+    svg.appendChild(rot);
+
+    pickers.forEach((p, j) => {
+      const x = gutter + j * anchoCol;
+      const f = celda.get(p + "|" + tienda);
+      const v = f ? f.falt : 0;
+      /* 2px de separación entre celdas para que se lean como marcas distintas */
+      const r = el("rect", {x:x+1, y:y+1, width:anchoCol-2, height:altoFila-2, rx:3,
+                            fill:v ? `var(${RAMPA[Math.min(6, Math.floor(Math.pow(v/max, .55) * 6.99))]})`
+                                   : "var(--surface-2)"});
+      svg.appendChild(r);
+      if (v){
+        const et = el("text", {x:x+anchoCol/2, y:y+altoFila/2+4, "text-anchor":"middle",
+                               "font-size":10.5, "font-variant-numeric":"tabular-nums",
+                               fill: v/max > 0.45 ? "var(--surface)" : "var(--ink)"});
+        et.textContent = corto(v).replace("$","");
+        svg.appendChild(et);
+        r.addEventListener("mousemove", ev => verTip(
+          `<div class="t">${esc(p)} · ${esc(tienda)}</div>
+           <div class="r"><span>Faltantes</span><b>${$(f.falt)}</b></div>
+           <div class="r"><span>Sobrantes</span><b>${$(f.sobr)}</b></div>
+           <div class="r"><span>Líneas</span><b>${N(f.lineas)}</b></div>
+           <div class="r"><span>Entregas</span><b>${N(f.entregas)}</b></div>`, ev));
+        r.addEventListener("mouseleave", sinTip);
+      }
+    });
+  });
+
+  /* escala de referencia */
+  RAMPA.forEach((tono, k) => {
+    svg.appendChild(el("rect", {x:gutter + k*22, y:alto-20, width:20, height:9, rx:2,
+                                fill:`var(${tono})`}));
+  });
+  const e0 = el("text", {x:gutter-8, y:alto-12, "text-anchor":"end", fill:"var(--ink-3)", "font-size":10.5});
+  e0.textContent = "menor costo";
+  const e1 = el("text", {x:gutter + RAMPA.length*22 + 8, y:alto-12, fill:"var(--ink-3)", "font-size":10.5});
+  e1.textContent = "mayor costo · máx " + corto(max);
+  svg.appendChild(e0); svg.appendChild(e1);
+
+  caja.appendChild(svg);
+}
+</script>
+
+<script>
+"use strict";
+
+/* ===================== tablas ===================== */
+
+function tabla(nodo, columnas, filas, opciones = {}){
+  if (!filas.length){
+    nodo.innerHTML = `<tbody><tr><td class="vacio">Sin resultados con los filtros actuales.</td></tr></tbody>`;
+    return;
+  }
+  const cab = columnas.map(c =>
+    `<th class="${c.n ? "n" : ""}" ${c.ancho ? `style="width:${c.ancho}"` : ""}>${esc(c.t)}</th>`).join("");
+  const cuerpo = filas.map((f, i) => {
+    const celdas = columnas.map(c => {
+      const v = c.v(f, i);
+      return `<td class="${c.n ? "n" : ""}">${v}</td>`;
+    }).join("");
+    return `<tr class="${opciones.alPulsar ? "pulsable" : ""}" data-i="${i}">${celdas}</tr>`;
+  }).join("");
+  nodo.innerHTML = `<thead><tr>${cab}</tr></thead><tbody>${cuerpo}</tbody>`;
+  if (opciones.alPulsar){
+    nodo.querySelectorAll("tbody tr").forEach(tr => {
+      tr.addEventListener("click", () => opciones.alPulsar(filas[+tr.dataset.i]));
+    });
+  }
+}
+
+function paginar(nodo, filas, pagina, clave, redibuja){
+  const paginas = Math.max(1, Math.ceil(filas.length / PORPAG));
+  const p = Math.min(pagina, paginas);
+  if (paginas <= 1 && filas.length <= PORPAG){ nodo.innerHTML = ""; return filas; }
+  nodo.innerHTML =
+    `<span>${N(filas.length)} filas · página ${p} de ${paginas}</span>
+     <button class="btn" data-d="-1" ${p<=1?"disabled":""}>Anterior</button>
+     <button class="btn" data-d="1" ${p>=paginas?"disabled":""}>Siguiente</button>`;
+  nodo.querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
+    PAG[clave] = p + (+b.dataset.d); redibuja();
+  }));
+  return filas.slice((p-1) * PORPAG, p * PORPAG);
+}
+
+function celdaBarra(valor, max){
+  const pct = max ? Math.max(2, 100 * valor / max) : 0;
+  return `<div class="barra-celda"><i style="width:${pct}%"></i><span>${$(valor)}</span></div>`;
+}
+
+/* ===================== vistas ===================== */
+
+function avisoExclusiones(){
+  const ex = D.excluidas;
+  if (!ex || !ex.lineas) return "";
+  const items = ex.detalle.map(x =>
+    `<li><strong>${$(Math.abs(x.valor))}</strong> · ${esc(x.tienda)} · ${esc(x.material)}
+     · ${N(x.unidades)} unidades · ${esc(x.fecha || "")}<br>${esc(x.motivo)}</li>`).join("");
+  return `<div class="aviso dato">
+      <div>
+        <strong>${N(ex.lineas)} línea${ex.lineas === 1 ? "" : "s"} excluida${ex.lineas === 1 ? "" : "s"}
+        por error de captura (${$(ex.valor)}).</strong>
+        No entra en ninguna cifra de este tablero.
+        <details><summary>Ver qué se excluyó</summary><ul>${items}</ul></details>
+      </div>
+    </div>`;
+}
+
+function pintarAviso(){
+  const caja = document.getElementById("avisoCobertura");
+  const cob = D.cobertura;
+  const exclusiones = avisoExclusiones();
+  if (!cob || !cob.despachoDesde){ caja.innerHTML = exclusiones; return; }
+  const idx = indicesFiltrados();
+  let conPicker = 0, costoTotal = 0, costoAtribuido = 0;
+  for (const i of idx){
+    const v = C.valor[i], esFalt = v < 0 ? -v : 0;
+    costoTotal += esFalt;
+    if (C.picker[i] !== ID_SIN_PICKER){ conPicker++; costoAtribuido += esFalt; }
+  }
+  const pct = idx.length ? 100 * conPicker / idx.length : 0;
+  if (pct >= 97){ caja.innerHTML = exclusiones; return; }
+  caja.innerHTML = exclusiones +
+    `<div class="aviso">
+       <div>
+         <strong>${pct.toFixed(0)}% de las líneas tienen picker identificado.</strong>
+         La hoja de despachos solo cubre del ${fechaLarga(new Date(cob.despachoDesde+"T00:00:00"))}
+         al ${fechaLarga(new Date(cob.despachoHasta+"T00:00:00"))} y los cuadrantes
+         ${esc(cob.cuadrantes.join(" y "))}, así que el resto de las diferencias
+         (${$(costoTotal - costoAtribuido)}) no se le puede asignar a nadie.
+         Active <strong>«Solo con picker asignable»</strong> para comparar pickers de forma pareja.
+       </div>
+     </div>`;
+}
+
+function pintarKPIs(){
+  const idx = indicesFiltrados();
+  const t = totales(idx);
+  const pickers = rankingPickers(idx).filter(p => !p.sinPicker);
+  const lider = pickers[0];
+  const dias = new Set(idx.map(i => C.dia[i])).size;
+
+  document.getElementById("kpis").innerHTML = `
+    <div class="kpi destacado">
+      <span class="et">Costo de faltantes</span>
+      <span class="val num">${corto(t.falt)}</span>
+      <span class="pie">${N(t.lineas)} líneas en ${N(dias)} días de despacho</span>
+    </div>
+    <div class="kpi">
+      <span class="et">Sobrantes</span>
+      <span class="val num">${corto(t.sobr)}</span>
+      <span class="pie">${N(t.uSobr)} unidades de más</span>
+    </div>
+    <div class="kpi">
+      <span class="et">Impacto neto</span>
+      <span class="val num">${corto(t.sobr - t.falt)}</span>
+      <span class="pie">Lo que se perdió en realidad</span>
+    </div>
+    <div class="kpi">
+      <span class="et">Unidades faltantes</span>
+      <span class="val num">${N(t.uFalt)}</span>
+      <span class="pie">${N(t.materiales.size)} materiales distintos</span>
+    </div>
+    <div class="kpi">
+      <span class="et">Tiendas afectadas</span>
+      <span class="val num">${N(t.tiendas.size)}</span>
+      <span class="pie">de ${N(DIC.tienda.length)} en total</span>
+    </div>
+    <div class="kpi">
+      <span class="et">Mayor impacto</span>
+      <span class="val num" style="font-size:22px">${lider ? esc(lider.nombre) : "—"}</span>
+      <span class="pie">${lider ? $(lider.falt) + " · " + lider.pct.toFixed(0) + "% del costo con responsable" : "Sin picker asignable"}</span>
+    </div>`;
+}
+
+function pintarPanorama(){
+  const idx = indicesFiltrados();
+  lineaTiempo(document.getElementById("gTendencia"), serieDiaria(idx));
+
+  const pickers = rankingPickers(idx).filter(p => !p.sinPicker);
+  barrasDobles(document.getElementById("gDoble"),
+    pickers.slice(0, 8).map(p => ({etiqueta:p.nombre, falt:p.falt, sobr:p.sobr})));
+
+  barrasH(document.getElementById("gPickers"), pickers.slice(0, 15).map(p => ({
+    etiqueta:p.nombre, valor:p.falt, clave:p.nombre,
+    tip:`<div class="t">${esc(p.nombre)}</div>
+         <div class="r"><span>Costo de faltantes</span><b>${$(p.falt)}</b></div>
+         <div class="r"><span>Participación</span><b>${p.pct != null ? p.pct.toFixed(1)+"%" : "—"}</b></div>
+         <div class="r"><span>Líneas</span><b>${N(p.lineas)}</b></div>
+         <div class="r"><span>Tiendas</span><b>${N(p.tiendas)}</b></div>
+         ${p.porCaja != null ? `<div class="r"><span>Costo por caja</span><b>${$(p.porCaja)}</b></div>` : ""}`,
+  })), {gutter:130, alPulsar:d => { F.picker = d.clave; sincronizarControles(); pintarTodo(); }});
+}
+
+function pintarPickers(){
+  const idx = indicesFiltrados();
+  const filas = rankingPickers(idx);
+  const max = Math.max(...filas.map(f => f.falt), 1);
+
+  tabla(document.getElementById("tPickers"), [
+    {t:"#", v:f => `<span class="puesto">${f.puesto ?? "—"}</span>`, ancho:"40px"},
+    {t:"Picker", v:f => f.sinPicker
+      ? `<span style="color:var(--ink-3)">${esc(f.nombre)}</span>`
+      : `<strong>${esc(f.nombre)}</strong>`},
+    {t:"Costo faltantes", v:f => celdaBarra(f.falt, max)},
+    {t:"% del costo con responsable", n:true, v:f => f.pct != null ? f.pct.toFixed(1)+"%" : "—"},
+    {t:"% acumulado", n:true, v:f => f.acum != null ? f.acum.toFixed(1)+"%" : "—"},
+    {t:"Sobrantes", n:true, v:f => $(f.sobr)},
+    {t:"Líneas", n:true, v:f => N(f.lineas)},
+    {t:"Tiendas", n:true, v:f => N(f.tiendas)},
+    {t:"Entregas c/dif", n:true, v:f => N(f.entregasDif)},
+    {t:"Entregas despach.", n:true, v:f => f.entregas ? N(f.entregas) : "—"},
+    {t:"% entregas c/dif", n:true, v:f => f.pctEntregas != null ? f.pctEntregas.toFixed(1)+"%" : "—"},
+    {t:"Cajas", n:true, v:f => f.cajas ? N(f.cajas) : "—"},
+    {t:"Costo por caja", n:true, v:f => f.porCaja != null ? $(f.porCaja) : "—"},
+  ], filas, {alPulsar:f => {
+    if (f.sinPicker) return;
+    F.picker = F.picker === f.nombre ? "" : f.nombre;
+    sincronizarControles(); pintarTodo();
+  }});
+
+  const conPicker = cruzePickerTienda(idx).filter(f => f.idPicker !== ID_SIN_PICKER);
+  const topPickers = [...new Set(conPicker.map(f => f.picker))].slice(0, 8);
+  const topTiendas = [...new Set(
+    conPicker.filter(f => topPickers.includes(f.picker)).map(f => f.tienda))].slice(0, 14);
+  matriz(document.getElementById("gMatriz"), conPicker, topPickers, topTiendas);
+
+  const maxC = Math.max(...conPicker.map(f => f.falt), 1);
+  const pagina = paginar(document.getElementById("pPickerTienda"), conPicker,
+                         PAG.pickerTienda, "pickerTienda", pintarPickers);
+  tabla(document.getElementById("tPickerTienda"), [
+    {t:"Picker", v:f => esc(f.picker)},
+    {t:"Tienda", v:f => esc(f.tienda)},
+    {t:"Costo faltantes", v:f => celdaBarra(f.falt, maxC)},
+    {t:"Sobrantes", n:true, v:f => $(f.sobr)},
+    {t:"Impacto neto", n:true, v:f => $(f.neto)},
+    {t:"Unids. faltantes", n:true, v:f => N(f.uFalt)},
+    {t:"Líneas", n:true, v:f => N(f.lineas)},
+    {t:"Entregas", n:true, v:f => N(f.entregas)},
+  ], pagina);
+}
+
+function pintarTiendas(){
+  const idx = indicesFiltrados();
+  const filas = rankingPor(idx, "tienda", DIC.tienda);
+
+  /* picker que más aporta en cada tienda */
+  const cruce = cruzePickerTienda(idx);
+  const dominante = new Map();
+  for (const f of cruce){
+    if (f.idPicker === ID_SIN_PICKER) continue;
+    const actual = dominante.get(f.tienda);
+    if (!actual || f.falt > actual.falt) dominante.set(f.tienda, f);
+  }
+
+  barrasH(document.getElementById("gTiendas"), filas.slice(0, 15).map(f => ({
+    etiqueta:f.nombre, valor:f.falt, clave:f.nombre,
+    tip:`<div class="t">${esc(f.nombre)}</div>
+         <div class="r"><span>Costo de faltantes</span><b>${$(f.falt)}</b></div>
+         <div class="r"><span>Sobrantes</span><b>${$(f.sobr)}</b></div>
+         <div class="r"><span>Líneas</span><b>${N(f.lineas)}</b></div>
+         <div class="r"><span>Materiales</span><b>${N(f.materiales)}</b></div>`,
+  })), {gutter:168, alPulsar:d => { F.tienda = d.clave; sincronizarControles(); pintarTodo(); }});
+
+  const max = Math.max(...filas.map(f => f.falt), 1);
+  const pagina = paginar(document.getElementById("pTiendas"), filas, PAG.tiendas, "tiendas", pintarTiendas);
+  tabla(document.getElementById("tTiendas"), [
+    {t:"#", v:f => `<span class="puesto">${f.puesto}</span>`, ancho:"40px"},
+    {t:"Tienda", v:f => `<strong>${esc(f.nombre)}</strong>`},
+    {t:"Costo faltantes", v:f => celdaBarra(f.falt, max)},
+    {t:"Sobrantes", n:true, v:f => $(f.sobr)},
+    {t:"Impacto neto", n:true, v:f => $(f.neto)},
+    {t:"Unids. faltantes", n:true, v:f => N(f.uFalt)},
+    {t:"Líneas", n:true, v:f => N(f.lineas)},
+    {t:"Materiales", n:true, v:f => N(f.materiales)},
+    {t:"Picker que más aporta", v:f => {
+      const d = dominante.get(f.nombre);
+      return d ? `${esc(d.picker)} <span class="chip">${corto(d.falt)}</span>` : "—";
+    }},
+  ], pagina, {alPulsar:f => { F.tienda = F.tienda === f.nombre ? "" : f.nombre;
+                              sincronizarControles(); pintarTodo(); }});
+}
+
+function pintarMateriales(){
+  const idx = indicesFiltrados();
+  const filas = rankingPor(idx, "material", DIC.materialDesc);
+  filas.forEach(f => f.codigo = DIC.materialCodigo[f.id]);
+
+  barrasH(document.getElementById("gMateriales"), filas.slice(0, 12).map(f => ({
+    etiqueta:f.nombre, valor:f.falt,
+    tip:`<div class="t">${esc(f.nombre)}</div>
+         <div class="r"><span>Código</span><b>${f.codigo}</b></div>
+         <div class="r"><span>Costo de faltantes</span><b>${$(f.falt)}</b></div>
+         <div class="r"><span>Unids. faltantes</span><b>${N(f.uFalt)}</b></div>
+         <div class="r"><span>Tiendas</span><b>${N(f.tiendas)}</b></div>`,
+  })), {gutter:230});
+
+  const max = Math.max(...filas.map(f => f.falt), 1);
+  const pagina = paginar(document.getElementById("pMateriales"), filas, PAG.materiales,
+                         "materiales", pintarMateriales);
+  tabla(document.getElementById("tMateriales"), [
+    {t:"#", v:f => `<span class="puesto">${f.puesto}</span>`, ancho:"40px"},
+    {t:"Código", v:f => `<span class="mono">${f.codigo}</span>`},
+    {t:"Material", v:f => esc(f.nombre)},
+    {t:"Costo faltantes", v:f => celdaBarra(f.falt, max)},
+    {t:"Sobrantes", n:true, v:f => $(f.sobr)},
+    {t:"Unids. faltantes", n:true, v:f => N(f.uFalt)},
+    {t:"Líneas", n:true, v:f => N(f.lineas)},
+    {t:"Tiendas", n:true, v:f => N(f.tiendas)},
+  ], pagina);
+}
+
+function pintarDetalle(){
+  const idx = indicesFiltrados().slice().sort((a, b) => C.valor[a] - C.valor[b]);
+  document.getElementById("notaDetalle").textContent =
+    `${entero.format(idx.length)} líneas con los filtros actuales, de la más costosa a la menos.`;
+  const pagina = paginar(document.getElementById("pDetalle"), idx, PAG.detalle, "detalle", pintarDetalle);
+  tabla(document.getElementById("tDetalle"), [
+    {t:"Fecha", v:i => fechaDe(C.dia[i]).toLocaleDateString("es-CO")},
+    {t:"Picker", v:i => C.picker[i] === ID_SIN_PICKER
+      ? `<span style="color:var(--ink-3)">sin cruce</span>`
+      : esc(DIC.picker[C.picker[i]])},
+    {t:"Tienda", v:i => esc(DIC.tienda[C.tienda[i]])},
+    {t:"Cuadrante", v:i => esc(DIC.cuadrante[C.cuadrante[i]])},
+    {t:"Entrega", v:i => `<span class="mono">${esc(C.entrega[i] || "—")}</span>`},
+    {t:"Material", v:i => `<span class="mono">${DIC.materialCodigo[C.material[i]]}</span> ${esc(DIC.materialDesc[C.material[i]])}`},
+    {t:"Unids.", n:true, v:i => N(C.unidades[i])},
+    {t:"Valor", n:true, v:i => `<strong>${$(C.valor[i])}</strong>`},
+    {t:"Tipo", v:i => C.valor[i] < 0
+      ? `<span class="chip falt">Faltante</span>` : `<span class="chip sobr">Sobrante</span>`},
+    {t:"Estado", v:i => esc(DIC.estado[C.estado[i]])},
+    {t:"Causal", v:i => esc(DIC.causal[C.causal[i]])},
+  ], pagina);
+}
+
+function pintarTodo(){
+  cacheLlave = "";
+  pintarAviso();
+  pintarKPIs();
+  if (VISTA === "panorama")   pintarPanorama();
+  if (VISTA === "pickers")    pintarPickers();
+  if (VISTA === "tiendas")    pintarTiendas();
+  if (VISTA === "materiales") pintarMateriales();
+  if (VISTA === "detalle")    pintarDetalle();
+  pintarPie();
+}
+
+function pintarPie(){
+  const cob = D.cobertura;
+  document.getElementById("pie").innerHTML =
+    `Datos procesados el ${esc(D.generado)} · ${N(C.valor.length)} líneas de diferencia · `
+    + `${N(DIC.tienda.length)} tiendas · ${N(cob.entregas)} entregas con picker asignado. `
+    + ((D.cuadrantesAnalizados || []).length
+        ? `Alcance: cuadrantes de cava (${esc(D.cuadrantesAnalizados.join(", "))}); `
+          + `los demás cuadrantes quedan fuera del análisis. `
+        : "")
+    + `Los faltantes se muestran como costo positivo; el impacto neto descuenta los sobrantes.`;
+}
+</script>
+
+<script>
+"use strict";
+
+/* ===================== controles ===================== */
+
+function opciones(select, valores, textoTodos){
+  const actual = select.value;
+  select.innerHTML = `<option value="">${textoTodos}</option>` +
+    valores.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join("");
+  if (valores.includes(actual)) select.value = actual;
+}
+
+function llenarFiltros(){
+  opciones(document.getElementById("fPicker"),
+           DIC.picker.filter(p => p !== SIN_CRUCE), "Todos los pickers");
+  opciones(document.getElementById("fTienda"), DIC.tienda, "Todas las tiendas");
+  opciones(document.getElementById("fCuadrante"), DIC.cuadrante, "Todos los cuadrantes");
+  opciones(document.getElementById("fEstado"), DIC.estado, "Todos los estados");
+
+  const dias = C.dia.filter(d => d >= 0);
+  const min = fechaDe(Math.min(...dias)), max = fechaDe(Math.max(...dias));
+  ["fDesde", "fHasta"].forEach(id => {
+    const n = document.getElementById(id);
+    n.min = iso(min); n.max = iso(max);
+  });
+  document.getElementById("rotuloPeriodo").textContent =
+    fechaLarga(min) + " — " + fechaLarga(max);
+
+  const alcance = document.getElementById("rotuloAlcance");
+  const qs = D.cuadrantesAnalizados || [];
+  alcance.textContent = qs.length ? "Cava" : "Todos los cuadrantes";
+  alcance.title = qs.length
+    ? "Solo se analizan los cuadrantes de cava: " + qs.join(", ")
+    : "Sin filtro de cuadrante";
+
+  if (DIC.estado.includes("APLICA")) F.estado = "APLICA";
+  else F.estado = "";
+}
+
+function sincronizarControles(){
+  document.getElementById("fDesde").value = F.desde || "";
+  document.getElementById("fHasta").value = F.hasta || "";
+  document.getElementById("fEstado").value = F.estado;
+  document.getElementById("fPicker").value = F.picker;
+  document.getElementById("fTienda").value = F.tienda;
+  document.getElementById("fCuadrante").value = F.cuadrante;
+  document.getElementById("fBuscar").value = F.buscar;
+  document.getElementById("fCobertura").checked = F.cobertura;
+}
+
+function reiniciarPaginas(){ for (const k in PAG) PAG[k] = 1; }
+
+function conectarFiltros(){
+  const enlaces = [["fDesde","desde"], ["fHasta","hasta"], ["fEstado","estado"],
+                   ["fPicker","picker"], ["fTienda","tienda"], ["fCuadrante","cuadrante"]];
+  for (const [id, campo] of enlaces){
+    document.getElementById(id).addEventListener("change", ev => {
+      F[campo] = ev.target.value; reiniciarPaginas(); pintarTodo();
+    });
+  }
+  let espera;
+  document.getElementById("fBuscar").addEventListener("input", ev => {
+    clearTimeout(espera);
+    espera = setTimeout(() => { F.buscar = ev.target.value; reiniciarPaginas(); pintarTodo(); }, 220);
+  });
+  document.getElementById("fCobertura").addEventListener("change", ev => {
+    F.cobertura = ev.target.checked; reiniciarPaginas(); pintarTodo();
+  });
+  document.getElementById("btnLimpiar").addEventListener("click", () => {
+    F.desde = F.hasta = null; F.picker = F.tienda = F.cuadrante = ""; F.buscar = "";
+    F.cobertura = false; F.estado = DIC.estado.includes("APLICA") ? "APLICA" : "";
+    reiniciarPaginas(); sincronizarControles(); pintarTodo();
+  });
+
+  document.querySelectorAll(".pestana").forEach(b => {
+    b.addEventListener("click", () => {
+      VISTA = b.dataset.vista;
+      document.querySelectorAll(".pestana").forEach(o =>
+        o.setAttribute("aria-selected", String(o === b)));
+      document.querySelectorAll(".vista").forEach(v =>
+        v.classList.toggle("activa", v.id === "vista-" + VISTA));
+      pintarTodo();
+    });
+  });
+}
+
+/* ===================== tema ===================== */
+
+function temaActual(){
+  const marca = document.documentElement.getAttribute("data-theme");
+  if (marca) return marca;
+  return matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+document.getElementById("btnTema").addEventListener("click", () => {
+  document.documentElement.setAttribute("data-theme", temaActual() === "dark" ? "light" : "dark");
+  try { localStorage.setItem("tema", temaActual()); } catch (e) {}
+  pintarTodo();
+});
+try {
+  const guardado = localStorage.getItem("tema");
+  if (guardado) document.documentElement.setAttribute("data-theme", guardado);
+} catch (e) {}
+
+/* ===================== exportar ===================== */
+
+/* El visor de artifacts no permite descargas directas: el archivo se entrega
+   por la capacidad "downloads", que le pide confirmación al usuario. Si la
+   página se abre fuera del visor (archivo local), se usa el enlace de siempre. */
+let GUARDAR = undefined;
+async function entregarArchivo(nombre, contenido){
+  if (GUARDAR === undefined){
+    GUARDAR = (window.claude && claude.use) ? await claude.use("downloads") : null;
+  }
+  const texto = "\uFEFF" + contenido;
+  if (GUARDAR){
+    try {
+      await GUARDAR.save({filename:nombre, data:texto});
+    } catch (e) {
+      if (e && e.code === "declined") return;
+      if (e && e.code === "rate_limited"){
+        alert("Ya hay una descarga esperando confirmación. Termínela e intente de nuevo.");
+        return;
+      }
+      alert("No se pudo entregar el archivo (" + ((e && e.code) || "error") + ").");
+    }
+    return;
+  }
+  const url = URL.createObjectURL(new Blob([texto], {type:"text/csv;charset=utf-8"}));
+  const a = document.createElement("a");
+  a.href = url; a.download = nombre; document.body.appendChild(a); a.click();
+  a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function aCsv(columnas, filas){
+  const limpia = v => {
+    const s = String(v ?? "").replace(/<[^>]*>/g, "").trim();
+    return /[";\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  return [columnas.join(";")].concat(filas.map(f => f.map(limpia).join(";"))).join("\n");
+}
+
+document.getElementById("btnCsv").addEventListener("click", async () => {
+  const idx = indicesFiltrados();
+  let nombre, columnas, filas;
+
+  if (VISTA === "pickers"){
+    nombre = "pickers";
+    columnas = ["Puesto","Picker","Costo faltantes","Sobrantes","Impacto neto","% del total",
+                "% acumulado","Lineas","Tiendas","Entregas con diferencia","Entregas despachadas",
+                "% entregas con diferencia","Cajas despachadas","Costo por caja"];
+    filas = rankingPickers(idx).map(f => [f.puesto ?? "", f.nombre, f.falt, f.sobr, f.neto,
+      f.pct != null ? f.pct.toFixed(1) : "", f.acum != null ? f.acum.toFixed(1) : "", f.lineas, f.tiendas, f.entregasDif,
+      f.entregas || "", f.pctEntregas != null ? f.pctEntregas.toFixed(1) : "",
+      f.cajas || "", f.porCaja != null ? Math.round(f.porCaja) : ""]);
+  } else if (VISTA === "tiendas"){
+    nombre = "tiendas";
+    columnas = ["Puesto","Tienda","Costo faltantes","Sobrantes","Impacto neto",
+                "Unidades faltantes","Lineas","Materiales"];
+    filas = rankingPor(idx, "tienda", DIC.tienda).map(f =>
+      [f.puesto, f.nombre, f.falt, f.sobr, f.neto, f.uFalt, f.lineas, f.materiales]);
+  } else if (VISTA === "materiales"){
+    nombre = "materiales";
+    columnas = ["Puesto","Codigo","Material","Costo faltantes","Sobrantes",
+                "Unidades faltantes","Lineas","Tiendas"];
+    filas = rankingPor(idx, "material", DIC.materialDesc).map(f =>
+      [f.puesto, DIC.materialCodigo[f.id], f.nombre, f.falt, f.sobr, f.uFalt, f.lineas, f.tiendas]);
+  } else {
+    nombre = "detalle";
+    columnas = ["Fecha","Picker","Tienda","Cuadrante","Ruta","Entrega","Codigo material",
+                "Material","Unidades","Valor","Tipo","Estado","Causal"];
+    filas = idx.slice().sort((a,b) => C.valor[a] - C.valor[b]).map(i => [
+      iso(fechaDe(C.dia[i])),
+      C.picker[i] === ID_SIN_PICKER ? SIN_CRUCE : DIC.picker[C.picker[i]],
+      DIC.tienda[C.tienda[i]], DIC.cuadrante[C.cuadrante[i]], DIC.ruta[C.ruta[i]],
+      C.entrega[i], DIC.materialCodigo[C.material[i]], DIC.materialDesc[C.material[i]],
+      C.unidades[i], C.valor[i], C.valor[i] < 0 ? "FALTANTE" : "SOBRANTE",
+      DIC.estado[C.estado[i]], DIC.causal[C.causal[i]],
+    ]);
+  }
+  entregarArchivo(`diferencias_${nombre}_${iso(new Date())}.csv`, aCsv(columnas, filas));
+});
+
+/* ===================== cargar un Excel nuevo ===================== */
+
+/* Mismo alcance que el analisis en Python: solo cava. La comparacion es exacta,
+   porque "FRUVER" a secas no es cava y no debe entrar por coincidencia parcial. */
+const CUADRANTES_CAVA = ["CONGELADOS", "NEVERA", "FRUVER NEVERA"];
+
+/* Reglas de exclusiones.json, incrustadas al construir el tablero. */
+const EXCLUSIONES = [/*__EXCLUSIONES__*/];
+
+function estaExcluida(fila){
+  return EXCLUSIONES.some(r =>
+    (r.entrega  === undefined || String(r.entrega) === fila.entrega) &&
+    (r.material === undefined || Number(r.material) === fila.codigo) &&
+    (r.unidades === undefined || Number(r.unidades) === fila.unidades) &&
+    (r.tienda   === undefined || String(r.tienda).toUpperCase() === fila.tienda) &&
+    (r.fecha    === undefined || (fila.fecha && r.fecha === iso(fila.fecha))));
+}
+function motivoExclusion(fila){
+  const r = EXCLUSIONES.find(r =>
+    (r.entrega  === undefined || String(r.entrega) === fila.entrega) &&
+    (r.material === undefined || Number(r.material) === fila.codigo) &&
+    (r.unidades === undefined || Number(r.unidades) === fila.unidades));
+  return r ? (r.motivo || "sin motivo") : "";
+}
+
+const ALIAS = {
+  fecha:["descarga inventarios (fecha/hora)","fecha"],
+  ceco:["ceco2","ceco"], tienda:["nombre tienda","tienda"],
+  material:["codigo material","material"], cuadrante:["cuadrante"],
+  descripcion:["descripcion material","descripcion"],
+  precio:["precio unitario","precio"], unidades:["unids. reporte","unidades","unids"],
+  valor:["$ total","total"], estado:["estado"], tipo:["falt/sob"],
+  causal:["entrega inexistente/sin ingreso","causal"],
+  llave:["comprobacion duplicados","cruce senuelos","llave"],
+};
+const ALIAS_DES = {
+  entrega:["n° entrega","no entrega","entrega"], picker:["picker"], ruta:["ruta"],
+  tienda:["tienda"], cuadrante:["cuadrante"], cajas:["suma de cajas","cajas"], fecha:["fecha"],
+};
+
+function normalizar(v){
+  return String(v ?? "").replace(/[\n\r]+/g, " ").normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim().toLowerCase();
+}
+function buscaCol(cabecera, alias){
+  const norm = cabecera.map(normalizar);
+  for (const a of alias){ const i = norm.indexOf(a); if (i >= 0) return i; }
+  for (const a of alias){ const i = norm.findIndex(c => c.includes(a)); if (i >= 0) return i; }
+  return -1;
+}
+function filaCabecera(matriz, pistas){
+  let mejor = 0, puntaje = -1;
+  for (let i = 0; i < Math.min(matriz.length, 12); i++){
+    const celdas = (matriz[i] || []).map(normalizar);
+    const p = pistas.filter(x => celdas.some(c => c.includes(x))).length;
+    if (p > puntaje){ puntaje = p; mejor = i; }
+  }
+  return mejor;
+}
+function aNumero(v){
+  if (typeof v === "number") return v;
+  const s = String(v ?? "").replace(/[^\d,.\-]/g, "").replace(/\./g, "").replace(",", ".");
+  const n = parseFloat(s);
+  return isNaN(n) ? null : n;
+}
+function limpia(v){
+  const s = String(v ?? "").replace(/\s+/g, " ").trim().toUpperCase();
+  return (!s || s === "NAN" || s === "#VALUE!" || s === "#N/A") ? null : s;
+}
+function aFecha(v){
+  if (v instanceof Date) return v;
+  if (typeof v === "number") return new Date(Date.UTC(1899, 11, 30) + v * 86400000);
+  const d = new Date(v);
+  return isNaN(d) ? null : d;
+}
+
+function reconstruir(libro){
+  const nombres = libro.SheetNames;
+  const hojaDif = libro.Sheets[nombres.find(n => /hoja ?1/i.test(n)) || nombres[0]];
+  const hojaDes = libro.Sheets[nombres.find(n => /hoja ?2/i.test(n)) || nombres[1]];
+  if (!hojaDif) throw new Error("El archivo no tiene una hoja con las diferencias.");
+
+  const mDif = XLSX.utils.sheet_to_json(hojaDif, {header:1, raw:true, defval:null});
+  const fDif = filaCabecera(mDif, ["nombre tienda","codigo material","estado","total","cuadrante"]);
+  const cabDif = mDif[fDif] || [];
+  const col = {};
+  for (const k in ALIAS) col[k] = buscaCol(cabDif, ALIAS[k]);
+  for (const k of ["tienda","material","valor","estado"]){
+    if (col[k] < 0) throw new Error(`No se encontró la columna «${ALIAS[k][0]}» en la hoja de diferencias.`);
+  }
+
+  /* hoja de despachos: entrega -> picker */
+  const porEntrega = new Map();
+  const exposicion = {};
+  let desDesde = null, desHasta = null;
+  const cuadrantesDes = new Set();
+  if (hojaDes){
+    const mDes = XLSX.utils.sheet_to_json(hojaDes, {header:1, raw:true, defval:null});
+    const fDes = filaCabecera(mDes, ["picker","entrega","tienda","ruta","cajas"]);
+    const cabDes = mDes[fDes] || [];
+    const cd = {};
+    for (const k in ALIAS_DES) cd[k] = buscaCol(cabDes, ALIAS_DES[k]);
+    for (let r = fDes + 1; r < mDes.length; r++){
+      const fila = mDes[r]; if (!fila) continue;
+      const numero = aNumero(fila[cd.entrega]);
+      if (!numero) continue;
+      const clave = String(Math.round(numero));
+      const picker = limpia(fila[cd.picker]) || "SIN PICKER";
+      const cajas = cd.cajas >= 0 ? (aNumero(fila[cd.cajas]) || 0) : 0;
+      if (!porEntrega.has(clave)){
+        porEntrega.set(clave, {picker, ruta:cd.ruta >= 0 ? limpia(fila[cd.ruta]) : null});
+        if (!exposicion[picker]) exposicion[picker] = {entregas:0, cajas:0};
+        exposicion[picker].entregas++;
+        exposicion[picker].cajas += cajas;
+      }
+      if (cd.cuadrante >= 0){ const q = limpia(fila[cd.cuadrante]); if (q) cuadrantesDes.add(q); }
+      if (cd.fecha >= 0){
+        const f = aFecha(fila[cd.fecha]);
+        if (f && !isNaN(f)){ if (!desDesde || f < desDesde) desDesde = f; if (!desHasta || f > desHasta) desHasta = f; }
+      }
+    }
+  }
+
+  let filas = [];
+  for (let r = fDif + 1; r < mDif.length; r++){
+    const fila = mDif[r]; if (!fila) continue;
+    let valor = aNumero(fila[col.valor]);
+    const unidades = aNumero(fila[col.unidades]);
+    const precio = aNumero(fila[col.precio]);
+    if (valor == null && unidades != null && precio != null) valor = unidades * precio;
+    if (valor == null) continue;
+    const tienda = limpia(fila[col.tienda]);
+    if (!tienda) continue;
+
+    let entrega = "";
+    if (col.llave >= 0){
+      const llave = String(fila[col.llave] ?? "");
+      const m = llave.match(/^.{10}(\d{10})/) || llave.match(/(98\d{8})/);
+      if (m) entrega = m[1];
+    }
+    const cuadrante = limpia(fila[col.cuadrante]) || "(sin dato)";
+    if (!CUADRANTES_CAVA.includes(cuadrante)) continue;
+
+    const fecha = col.fecha >= 0 ? aFecha(fila[col.fecha]) : null;
+    const info = porEntrega.get(entrega);
+    filas.push({
+      fecha, tienda, cuadrante,
+      estado: limpia(fila[col.estado]) || "(sin dato)",
+      causal: (col.causal >= 0 ? limpia(fila[col.causal]) : null) || "(sin dato)",
+      codigo: Math.round(aNumero(fila[col.material]) || 0),
+      descripcion: (col.descripcion >= 0 ? limpia(fila[col.descripcion]) : null) || "(sin descripcion)",
+      unidades: Math.round(unidades || 0), valor: Math.round(valor), entrega,
+      picker: info ? info.picker : SIN_CRUCE,
+      ruta: info && info.ruta ? info.ruta : "(sin dato)",
+    });
+  }
+  if (!filas.length){
+    throw new Error("No se encontró ninguna línea de diferencia en los cuadrantes de cava ("
+                    + CUADRANTES_CAVA.join(", ") + ").");
+  }
+
+  /* Las lineas excluidas por error de captura salen del analisis pero se
+     reportan aparte: nunca se descartan en silencio. */
+  const excluidas = filas.filter(estaExcluida);
+  filas = filas.filter(f => !estaExcluida(f));
+  if (!filas.length){
+    throw new Error("Todas las líneas quedaron excluidas por las reglas de exclusión.");
+  }
+
+  /* empaquetar igual que el JSON preparado en Python */
+  const indexa = (lista) => {
+    const unicos = [...new Set(lista)].sort();
+    const pos = new Map(unicos.map((v, i) => [v, i]));
+    return [unicos, lista.map(v => pos.get(v))];
+  };
+  const fechas = filas.map(f => f.fecha).filter(Boolean);
+  const origen = fechas.length ? new Date(Math.min(...fechas)) : new Date();
+  origen.setHours(0, 0, 0, 0);
+
+  const [dPicker, iPicker] = indexa(filas.map(f => f.picker));
+  const [dTienda, iTienda] = indexa(filas.map(f => f.tienda));
+  const [dCuad, iCuad]     = indexa(filas.map(f => f.cuadrante));
+  const [dEstado, iEstado] = indexa(filas.map(f => f.estado));
+  const [dCausal, iCausal] = indexa(filas.map(f => f.causal));
+  const [dRuta, iRuta]     = indexa(filas.map(f => f.ruta));
+
+  const codigos = [...new Set(filas.map(f => f.codigo))].sort((a, b) => a - b);
+  const posCod = new Map(codigos.map((c, i) => [c, i]));
+  const desc = codigos.map(c => (filas.find(f => f.codigo === c) || {}).descripcion || "(sin descripcion)");
+
+  return {
+    generado: new Date().toLocaleString("es-CO"),
+    origenFecha: iso(origen),
+    cuadrantesAnalizados: CUADRANTES_CAVA.slice(),
+    excluidas: {
+      lineas: excluidas.length,
+      valor: excluidas.reduce((s, f) => s + (f.valor < 0 ? -f.valor : 0), 0),
+      detalle: excluidas.map(f => ({
+        fecha: f.fecha ? iso(f.fecha) : null, tienda: f.tienda,
+        material: f.descripcion, unidades: f.unidades, valor: f.valor,
+        motivo: motivoExclusion(f),
+      })),
+    },
+    dic: {picker:dPicker, tienda:dTienda, cuadrante:dCuad, estado:dEstado, causal:dCausal,
+          ruta:dRuta, materialCodigo:codigos, materialDesc:desc},
+    cols: {
+      dia: filas.map(f => f.fecha ? Math.round((f.fecha - origen) / 86400000) : -1),
+      picker:iPicker, tienda:iTienda, cuadrante:iCuad, estado:iEstado, causal:iCausal, ruta:iRuta,
+      material: filas.map(f => posCod.get(f.codigo)),
+      unidades: filas.map(f => f.unidades),
+      valor: filas.map(f => f.valor),
+      entrega: filas.map(f => f.entrega),
+    },
+    exposicion,
+    cobertura: {
+      despachoDesde: desDesde ? iso(desDesde) : null,
+      despachoHasta: desHasta ? iso(desHasta) : null,
+      cuadrantes: [...cuadrantesDes],
+      entregas: porEntrega.size,
+    },
+  };
+}
+
+function cargarSheetJS(){
+  /* Primero la copia que viaja con el sitio y solo despues el CDN: en las redes
+     corporativas los CDN suelen estar bloqueados, y sin lector de Excel el boton
+     de cargar no serviria de nada. */
+  const fuentes = [
+    "xlsx.full.min.js",
+    "vendor/xlsx.full.min.js",
+    "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js",
+  ];
+  return new Promise((ok, mal) => {
+    if (window.XLSX) return ok();
+    let i = 0;
+    const intenta = () => {
+      if (i >= fuentes.length){
+        return mal(new Error(
+          "No se pudo cargar el lector de Excel. Si la red bloquea internet, "
+          + "el archivo xlsx.full.min.js debe estar junto a esta pagina."));
+      }
+      const s = document.createElement("script");
+      s.src = fuentes[i++];
+      s.onload = () => (window.XLSX ? ok() : intenta());
+      s.onerror = intenta;
+      document.head.appendChild(s);
+    };
+    intenta();
+  });
+}
+
+const btnCargar = document.getElementById("btnCargar");
+const entrada = document.getElementById("archivo");
+const zona = document.getElementById("zonaSoltar");
+const cajaError = document.getElementById("errorCarga");
+
+function muestraError(mensaje){
+  cajaError.innerHTML = `<div class="error-carga"><strong>No se pudo leer el archivo.</strong><br>${esc(mensaje)}</div>`;
+}
+
+async function procesa(archivo){
+  if (!archivo) return;
+  if (!/\.(xlsx|xlsm|xls)$/i.test(archivo.name)){
+    muestraError("El archivo debe ser un Excel (.xlsx, .xlsm o .xls). Recibí «" + archivo.name + "».");
+    return;
+  }
+  cajaError.innerHTML = "";
+  const textoOriginal = btnCargar.textContent;
+  btnCargar.textContent = "Procesando…"; btnCargar.disabled = true;
+  if (zona) zona.querySelector("strong").textContent = "Procesando " + archivo.name + "…";
+
+  try {
+    await cargarSheetJS();
+    const libro = XLSX.read(await archivo.arrayBuffer(), {cellDates:true});
+    const datos = reconstruir(libro);
+    activar(datos);
+    guardaSiPiden(datos);
+    btnCargar.textContent = "Datos actualizados";
+    setTimeout(() => { btnCargar.textContent = "Cambiar Excel"; }, 2200);
+  } catch (e) {
+    muestraError((e && e.message) || "Error desconocido.");
+    if (!D) muestraTablero(false);
+    btnCargar.textContent = textoOriginal;
+    if (zona) zona.querySelector("strong").textContent =
+      "Suelte aquí el archivo, o haga clic para buscarlo";
+  } finally {
+    btnCargar.disabled = false;
+    entrada.value = "";
+  }
+}
+
+btnCargar.addEventListener("click", () => entrada.click());
+entrada.addEventListener("change", ev => procesa(ev.target.files[0]));
+
+if (zona){
+  zona.addEventListener("click", () => entrada.click());
+  zona.addEventListener("keydown", ev => {
+    if (ev.key === "Enter" || ev.key === " "){ ev.preventDefault(); entrada.click(); }
+  });
+  ["dragenter", "dragover"].forEach(evt =>
+    zona.addEventListener(evt, ev => { ev.preventDefault(); zona.classList.add("encima"); }));
+  ["dragleave", "drop"].forEach(evt =>
+    zona.addEventListener(evt, ev => { ev.preventDefault(); zona.classList.remove("encima"); }));
+  zona.addEventListener("drop", ev => procesa(ev.dataTransfer.files[0]));
+}
+
+/* ===================== arranque ===================== */
+
+function muestraTablero(hay){
+  document.getElementById("bienvenida").classList.toggle("oculto", hay);
+  for (const id of ["tablero", "filtros", "pestanas", "pie"]){
+    document.getElementById(id).classList.toggle("oculto", !hay);
+  }
+  document.getElementById("btnCsv").disabled = !hay;
+  document.getElementById("btnCargar").textContent = hay ? "Cambiar Excel" : "Cargar Excel";
+}
+
+function activar(datos){
+  D = datos; C = D.cols; DIC = D.dic;
+  ORIGEN = new Date(D.origenFecha + "T00:00:00");
+  ID_SIN_PICKER = DIC.picker.indexOf(SIN_CRUCE);
+  llenarFiltros();
+  F.desde = F.hasta = null; F.picker = F.tienda = F.cuadrante = ""; F.buscar = "";
+  F.cobertura = false;
+  reiniciarPaginas();
+  sincronizarControles();
+  muestraTablero(true);
+  pintarTodo();
+}
+
+function guardaSiPiden(datos){
+  const casilla = document.getElementById("recordar");
+  if (!casilla || !casilla.checked) return;
+  try {
+    localStorage.setItem(CLAVE_GUARDADO, JSON.stringify(datos));
+  } catch (e) {
+    /* Sin espacio o con el almacenamiento bloqueado: el tablero sigue
+       funcionando, solo que habra que volver a cargar el archivo. */
+  }
+}
+
+function olvidarDatos(){
+  try { localStorage.removeItem(CLAVE_GUARDADO); } catch (e) {}
+  location.reload();
+}
+
+function leerGuardados(){
+  try {
+    const bruto = localStorage.getItem(CLAVE_GUARDADO);
+    if (!bruto) return null;
+    const p = JSON.parse(bruto);
+    return (p && p.cols && p.cols.valor && p.cols.valor.length) ? p : null;
+  } catch (e) { return null; }
+}
+
+conectarFiltros();
+
+const inicial = leerIncrustados() || leerGuardados();
+if (inicial){
+  activar(inicial);
+  if (!leerIncrustados()){
+    document.getElementById("recordar").checked = true;
+    const b = document.createElement("button");
+    b.className = "btn"; b.id = "btnOlvidar"; b.textContent = "Olvidar datos";
+    b.title = "Borra los datos guardados en este navegador";
+    b.addEventListener("click", olvidarDatos);
+    document.querySelector(".acciones").prepend(b);
+  }
+} else {
+  muestraTablero(false);
+}
+
+let remedir;
+addEventListener("resize", () => {
+  if (!D) return;
+  clearTimeout(remedir); remedir = setTimeout(pintarTodo, 180);
+});
+</script>

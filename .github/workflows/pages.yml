@@ -1,0 +1,68 @@
+# Publica el tablero en GitHub Pages.
+#
+# Se publica la version SIN datos: quien abre la pagina carga su propio Excel,
+# que se procesa en su navegador y no sale de su equipo. Por eso este sitio se
+# puede tener en un repositorio publico sin exponer informacion de la empresa.
+name: Publicar tablero
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "tablero/**"
+      - "exclusiones.json"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:   # permite publicarlo a mano desde la pestana Actions
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Si llegan dos publicaciones seguidas, se deja terminar la que este en curso.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  construir:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Armar el tablero sin datos
+        run: |
+          mkdir -p sitio
+          python tablero/construir.py --vacio -o sitio/index.html
+          # El lector de Excel viaja con el sitio para no depender de un CDN.
+          cp tablero/vendor/xlsx.full.min.js sitio/
+          cp tablero/vendor/LICENSE-xlsx.txt sitio/
+
+      - name: Verificar que no se publiquen datos
+        run: |
+          # Barrera de seguridad: si alguna vez se construyera con datos por error,
+          # el sitio no debe publicarse.
+          if grep -q '"materialCodigo"' sitio/index.html; then
+            echo "ERROR: el tablero se construyo CON datos. No se publica."
+            exit 1
+          fi
+          echo "OK: el tablero no contiene datos."
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: sitio
+
+  publicar:
+    needs: construir
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.despliegue.outputs.page_url }}
+    steps:
+      - id: despliegue
+        uses: actions/deploy-pages@v4
