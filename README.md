@@ -115,6 +115,20 @@ afectan todas las pestañas a la vez. Al hacer clic en una barra o en una fila s
 el tablero por ese picker o esa tienda. El botón **Exportar CSV** baja lo que esté
 en pantalla, y **Cargar Excel** procesa un archivo nuevo sin salir de la página.
 
+### Versión sin datos (para publicar)
+
+```bash
+python tablero/construir.py --vacio -o index.html
+```
+
+Produce el tablero **sin ningún dato**: quien lo abre carga su propio Excel, que se
+procesa en su navegador y no sale del equipo. Es la versión apta para publicar en un
+sitio público, porque el archivo no contiene información de la empresa. Pesa 76 KB.
+
+La casilla «recordar los datos en este navegador» guarda el análisis en el equipo de
+quien lo usa para no volver a cargar el archivo cada vez; viene desactivada y el botón
+«Olvidar datos» lo borra.
+
 ### Regenerarlo con datos nuevos
 
 ```bash
