@@ -24,6 +24,7 @@ Uso:
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sys
 import unicodedata
@@ -42,6 +43,9 @@ FORMATO_PESOS = '"$"#,##0;[Red]-"$"#,##0'
 # Ojo: "FRUVER" a secas NO es cava, por eso la comparacion es exacta y no por
 # coincidencia parcial (si no, "FRUVER" entraria por estar dentro de "FRUVER NEVERA").
 CUADRANTES_CAVA = ("CONGELADOS", "NEVERA", "FRUVER NEVERA")
+
+# Lineas descartadas por ser errores de captura comprobados.
+ARCHIVO_EXCLUSIONES = Path(__file__).resolve().parent / "exclusiones.json"
 
 
 def normaliza(texto) -> str:
@@ -70,6 +74,53 @@ def busca_columna(df: pd.DataFrame, alias: list[str], obligatoria: bool = True):
             f"Columnas disponibles: {list(df.columns)}"
         )
     return None
+
+
+def carga_exclusiones(ruta: Path = ARCHIVO_EXCLUSIONES) -> list[dict]:
+    """Lee las reglas de exclusion. Si no hay archivo, no se excluye nada."""
+    if not ruta.exists():
+        return []
+    with open(ruta, encoding="utf-8") as f:
+        return json.load(f).get("exclusiones", [])
+
+
+# Como se compara cada campo de una regla contra el DataFrame.
+_CAMPOS_EXCLUSION = {
+    "entrega":  lambda df, v: df["N ENTREGA"].astype("string") == str(v),
+    "material": lambda df, v: df["CODIGO MATERIAL"] == int(v),
+    "unidades": lambda df, v: df["UNIDADES"] == float(v),
+    "tienda":   lambda df, v: df["TIENDA"] == str(v).strip().upper(),
+    "ceco":     lambda df, v: df["CECO"] == str(v).strip().upper(),
+    "fecha":    lambda df, v: df["FECHA"].dt.date.astype("string") == str(v),
+}
+
+
+def aplica_exclusiones(df: pd.DataFrame,
+                       reglas: list[dict]) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Devuelve (lineas que se analizan, lineas excluidas).
+
+    Una regla saca las lineas que coinciden con TODOS los campos que declara,
+    de modo que entre mas campos tenga, mas estrecha es. Las excluidas se
+    devuelven aparte a proposito: nunca se descartan en silencio.
+    """
+    if df.empty or not reglas:
+        return df, df.iloc[0:0].assign(MOTIVO=pd.Series(dtype="string"))
+
+    fuera = pd.Series(False, index=df.index)
+    motivos = pd.Series(pd.NA, index=df.index, dtype="string")
+    for regla in reglas:
+        criterios = [comp(df, regla[campo])
+                     for campo, comp in _CAMPOS_EXCLUSION.items() if campo in regla]
+        if not criterios:
+            continue  # una regla sin campos sacaria todo: se ignora
+        coincide = pd.concat(criterios, axis=1).all(axis=1)
+        motivos = motivos.mask(coincide & motivos.isna(), regla.get("motivo", "sin motivo"))
+        fuera |= coincide
+
+    excluidas = df[fuera].copy()
+    excluidas["MOTIVO"] = motivos[fuera]
+    return df[~fuera], excluidas
 
 
 def filtra_cuadrantes(df: pd.DataFrame, cuadrantes) -> pd.DataFrame:
@@ -372,7 +423,8 @@ def top_materiales(todas: pd.DataFrame, top: int = 100) -> pd.DataFrame:
 
 
 def construye_resumen(datos: Datos, todas: pd.DataFrame, ranking: pd.DataFrame,
-                      estado: str, metrica: str, cuadrantes=()) -> pd.DataFrame:
+                      estado: str, metrica: str, cuadrantes=(),
+                      excluidas: pd.DataFrame | None = None) -> pd.DataFrame:
     falt = todas["VALOR"].where(todas["VALOR"] < 0, 0).abs().sum()
     sobr = todas["VALOR"].where(todas["VALOR"] > 0, 0).sum()
     con_p = datos.detalle
@@ -415,6 +467,12 @@ def construye_resumen(datos: Datos, todas: pd.DataFrame, ranking: pd.DataFrame,
         ("Entregas en la hoja de despachos", datos.cobertura["Entregas en hoja de despacho"]),
         ("Nota", "Solo se puede asignar picker a las entregas presentes en la hoja "
                  "de despachos; el resto queda en la hoja 'Sin Picker'."),
+        ("", ""),
+        ("Lineas excluidas por regla", 0 if excluidas is None else len(excluidas)),
+        ("Valor excluido (faltantes)", 0.0 if excluidas is None or excluidas.empty
+                                       else float(-excluidas["VALOR"].clip(upper=0).sum())),
+        ("Detalle de lo excluido", "Ver la hoja 'Excluidas'" if excluidas is not None
+                                   and len(excluidas) else "sin exclusiones"),
     ]
     return pd.DataFrame(filas, columns=["INDICADOR", "VALOR"])
 
@@ -593,6 +651,8 @@ def main(argv=None) -> int:
                         f"Por defecto los de cava: {', '.join(CUADRANTES_CAVA)}.")
     p.add_argument("--todos-los-cuadrantes", action="store_true",
                    help="Analiza todos los cuadrantes, no solo los de cava.")
+    p.add_argument("--sin-exclusiones", action="store_true",
+                   help="No aplica exclusiones.json: analiza los datos crudos.")
     p.add_argument("--solo-cobertura", action="store_true",
                    help="Analiza unicamente el periodo y los cuadrantes que cubre la hoja de "
                         "despachos, para que los porcentajes por picker sean comparables.")
@@ -624,6 +684,13 @@ def main(argv=None) -> int:
         print(f"Cuadrantes analizados: {', '.join(cuadrantes)} "
               f"({len(diferencias):,} de {antes:,} lineas).")
 
+    reglas = [] if args.sin_exclusiones else carga_exclusiones()
+    diferencias, excluidas = aplica_exclusiones(diferencias, reglas)
+    if len(excluidas):
+        costo = -excluidas["VALOR"].clip(upper=0).sum()
+        print(f"Lineas excluidas por exclusiones.json: {len(excluidas)} "
+              f"(${costo:,.0f} en faltantes). Ver la hoja 'Excluidas'.")
+
     if args.estado == "aplica":
         diferencias = diferencias[diferencias["ESTADO"] == "APLICA"]
     elif args.estado == "sin-pendientes":
@@ -654,7 +721,8 @@ def main(argv=None) -> int:
     todas = pd.concat([datos.detalle, datos.sin_picker], ignore_index=True)
 
     ranking = ranking_pickers(datos, args.metrica)
-    resumen = construye_resumen(datos, todas, ranking, args.estado, args.metrica, cuadrantes)
+    resumen = construye_resumen(datos, todas, ranking, args.estado, args.metrica,
+                                cuadrantes, excluidas)
 
     columnas_detalle = [
         "FECHA", "PICKER", "TIENDA", "CECO", "CUADRANTE", "N ENTREGA", "RUTA",
@@ -676,6 +744,8 @@ def main(argv=None) -> int:
         "Ranking Tiendas": ranking_tiendas(datos, todas),
         "Top Materiales": top_materiales(todas),
         "Sin Picker": sin_picker,
+        "Excluidas": excluidas.reindex(
+            columns=[c for c in columnas_detalle if c not in ("PICKER", "RUTA")] + ["MOTIVO"]),
     })
 
     imprime_consola(resumen, ranking, args.top)

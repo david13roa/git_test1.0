@@ -27,7 +27,7 @@ from backend.almacen import ALMACEN, DatosInvalidos, Filtros
 from informe_diferencias import (CUADRANTES_CAVA, Datos, construye_resumen,
                                  exporta, picker_por_tienda, ranking_pickers,
                                  ranking_tiendas, top_materiales)
-from preparar_datos_web import empaqueta
+from preparar_datos_web import empaqueta, resume_excluidas
 
 RAIZ = Path(__file__).resolve().parent.parent
 PLANTILLA = RAIZ / "tablero" / "plantilla.html"
@@ -102,7 +102,14 @@ def meta():
         "desde": fechas.min().date().isoformat() if not fechas.empty else None,
         "hasta": fechas.max().date().isoformat() if not fechas.empty else None,
         "cobertura": d.cobertura,
+        "excluidas": resume_excluidas(d.excluidas),
     }
+
+
+@app.get("/api/exclusiones", tags=["estado"],
+         summary="Lineas descartadas por error de captura y su motivo")
+def exclusiones():
+    return resume_excluidas(_datos_o_error().excluidas)
 
 
 @app.get("/api/filtros", tags=["estado"], summary="Valores disponibles para filtrar")
@@ -117,7 +124,9 @@ def filtros_disponibles():
 @app.get("/api/resumen", tags=["consultas"], summary="Indicadores generales")
 def resumen(f: Filtros = Depends(filtros)):
     d = _datos_o_error()
-    return consultas.resumen(_filtrado(f), d.cobertura, d.cuadrantes)
+    salida = consultas.resumen(_filtrado(f), d.cobertura, d.cuadrantes)
+    salida["excluidas"] = resume_excluidas(d.excluidas)
+    return salida
 
 
 @app.get("/api/pickers", tags=["consultas"],
@@ -245,6 +254,8 @@ def informe_excel(f: Filtros = Depends(filtros)):
             "Sin Picker": sin_picker.reindex(
                 columns=[c for c in columnas if c not in ("PICKER", "RUTA")])
                 .sort_values("VALOR"),
+            "Excluidas": d.excluidas.reindex(
+                columns=[c for c in columnas if c not in ("PICKER", "RUTA")] + ["MOTIVO"]),
         })
         cuerpo = ruta.read_bytes()
 
@@ -267,7 +278,8 @@ def _paquete_web() -> dict:
     """JSON compacto del tablero, calculado una vez por dataset."""
     d = _datos_o_error()
     if "actual" not in _PAQUETE:
-        _PAQUETE["actual"] = empaqueta(d.lineas, d.despachos, d.cuadrantes)
+        _PAQUETE["actual"] = empaqueta(d.lineas, d.despachos, d.cuadrantes,
+                                       d.excluidas)
     return _PAQUETE["actual"]
 
 

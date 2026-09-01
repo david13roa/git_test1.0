@@ -48,6 +48,7 @@ Para empezar, copie ahí el archivo de diferencias, o súbalo por la API.
 | `GET /` | El tablero interactivo con los datos ya embebidos. |
 | `GET /api/salud` | Si el servicio responde y si hay datos cargados. |
 | `GET /api/meta` | Qué archivo está activo, qué periodo y qué cuadrantes cubre. |
+| `GET /api/exclusiones` | Qué líneas se descartaron por error de captura y por qué. |
 | `GET /api/filtros` | Pickers, tiendas, cuadrantes, estados y rango de fechas disponibles. |
 | `GET /api/resumen` | Indicadores generales: costo, sobrantes, impacto neto, % atribuido. |
 | `GET /api/pickers` | Ranking con costo por caja, % de entregas con diferencia y % acumulado. |
@@ -105,6 +106,9 @@ publicado en una URL o abierto desde el disco con doble clic.
 | **Tiendas** | Ranking de tiendas y el picker que más aporta al costo en cada una. |
 | **Materiales** | Las referencias que más se pierden. |
 | **Detalle** | Línea a línea, filtrable y exportable. |
+
+El aviso del inicio declara las líneas excluidas por error de captura y permite
+desplegar cuáles fueron.
 
 Los filtros de arriba (fechas, estado, picker, tienda, cuadrante, búsqueda de material)
 afectan todas las pestañas a la vez. Al hacer clic en una barra o en una fila se filtra
@@ -225,9 +229,57 @@ busca el Excel en su propia carpeta; si hay varios, te pregunta cuál usar.
 | `--metrica` | Criterio del ranking: `faltante` (por defecto), `neto` o `absoluto`. |
 | `--cuadrantes` | Cuadrantes a analizar, separados por coma. Por defecto los de cava. |
 | `--todos-los-cuadrantes` | Analiza todos los cuadrantes, sin el recorte de cava. |
+| `--sin-exclusiones` | Ignora `exclusiones.json` y analiza los datos crudos. |
 | `--solo-cobertura` | Limita el análisis al periodo y los cuadrantes que cubre la hoja de despachos. |
 | `--desde`, `--hasta` | Rango de fechas `AAAA-MM-DD`. |
 | `--top` | Cuántos pickers mostrar en consola (por defecto 15). |
+
+---
+
+## Líneas excluidas por error de captura
+
+Algunas líneas del Excel son errores de digitación que distorsionan todo el análisis.
+En vez de filtrarlas con un umbral automático —que el mes siguiente descartaría datos
+buenos sin avisar— se declaran una por una en **`exclusiones.json`**, con su motivo y
+quién lo autorizó.
+
+```json
+{
+  "exclusiones": [
+    {
+      "entrega": "9832115290",
+      "material": 12000395,
+      "unidades": -127453,
+      "motivo": "Cantidad imposible: 127.453 unidades de pizza de 130 g en una sola entrega...",
+      "reportadoPor": "David Roa",
+      "registradoEl": "2026-09-01"
+    }
+  ]
+}
+```
+
+Una regla saca solo las líneas que coinciden con **todos** los campos que declara, así
+que entre más campos, más estrecha. Los criterios disponibles son `entrega`, `material`,
+`unidades`, `tienda`, `ceco` y `fecha` (la fecha de la línea). Los campos `motivo`,
+`reportadoPor` y `registradoEl` son notas y no se usan para comparar.
+
+**Nada se descarta en silencio.** Lo excluido aparece en la hoja `Excluidas` del Excel,
+en `GET /api/exclusiones`, y en un aviso desplegable al inicio del tablero. Para ver los
+datos crudos: `python informe_diferencias.py archivo.xlsx --sin-exclusiones`.
+
+### Efecto de la exclusión actual
+
+Una sola línea —127.453 unidades de pizza de 130 g en FELICIDAD el 13 de agosto—
+valía $675.500.900, el 53 % de todo el costo de la cava. La siguiente línea más
+costosa del periodo es 330 veces menor ($2.051.082).
+
+| | Con la línea | Sin la línea |
+|---|---|---|
+| Costo de faltantes | $1.278.044.658 | **$602.543.758** |
+| Tienda #1 | FELICIDAD (53,3 % del total) | ARRECIFE (2,3 %) |
+| Tendencia diaria | plana con un pico | legible |
+
+El ranking de pickers no cambia: esa línea no tenía picker asignado.
 
 ---
 
@@ -259,6 +311,7 @@ Las diferencias cuya entrega no aparece en la hoja de despachos quedan en la hoj
 | **Ranking Tiendas** | Tiendas ordenadas por impacto, con el picker que más aporta en cada una. |
 | **Top Materiales** | Los 100 materiales con mayor valor de faltantes. |
 | **Sin Picker** | Diferencias que no se pudieron atribuir. |
+| **Excluidas** | Líneas descartadas por error de captura, con su motivo. |
 
 ## Definición de las métricas
 
@@ -280,7 +333,7 @@ En el archivo de ejemplo, las diferencias de cava abarcan del **1 de julio al 28
 agosto**, mientras que la hoja de despachos solo cubre del **19 al 31 de agosto** y
 los cuadrantes **CONGELADOS** y **NEVERA**. Por eso solo se puede asignar picker a
 una parte de las diferencias: 14,2 % de las líneas, que son $74,8 millones de los
-$1.278 millones de faltantes.
+$602,5 millones de faltantes (después de la exclusión documentada más abajo).
 
 Con `--solo-cobertura` el análisis se limita a esa ventana, y ahí la atribución sube
 a más de la mitad de las líneas. Para atribuir el resto del periodo hay que ampliar

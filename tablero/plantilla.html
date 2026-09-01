@@ -120,6 +120,11 @@ main{max-width:1440px; margin:0 auto; padding:20px}
   border-radius:var(--r); font-size:13px; color:var(--ink-2);
 }
 .aviso strong{color:var(--ink); font-weight:600}
+.aviso.dato{border-left-color:var(--ink-3)}
+.aviso + .aviso{margin-top:10px}
+.aviso details summary{cursor:pointer; color:var(--falt); font-weight:500}
+.aviso details ul{margin:8px 0 0; padding-left:18px}
+.aviso details li{margin-bottom:3px}
 
 /* KPI */
 .kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(178px,1fr)); gap:12px}
@@ -909,10 +914,27 @@ function celdaBarra(valor, max){
 
 /* ===================== vistas ===================== */
 
+function avisoExclusiones(){
+  const ex = D.excluidas;
+  if (!ex || !ex.lineas) return "";
+  const items = ex.detalle.map(x =>
+    `<li><strong>${$(Math.abs(x.valor))}</strong> · ${esc(x.tienda)} · ${esc(x.material)}
+     · ${N(x.unidades)} unidades · ${esc(x.fecha || "")}<br>${esc(x.motivo)}</li>`).join("");
+  return `<div class="aviso dato">
+      <div>
+        <strong>${N(ex.lineas)} línea${ex.lineas === 1 ? "" : "s"} excluida${ex.lineas === 1 ? "" : "s"}
+        por error de captura (${$(ex.valor)}).</strong>
+        No entra en ninguna cifra de este tablero.
+        <details><summary>Ver qué se excluyó</summary><ul>${items}</ul></details>
+      </div>
+    </div>`;
+}
+
 function pintarAviso(){
   const caja = document.getElementById("avisoCobertura");
   const cob = D.cobertura;
-  if (!cob || !cob.despachoDesde){ caja.innerHTML = ""; return; }
+  const exclusiones = avisoExclusiones();
+  if (!cob || !cob.despachoDesde){ caja.innerHTML = exclusiones; return; }
   const idx = indicesFiltrados();
   let conPicker = 0, costoTotal = 0, costoAtribuido = 0;
   for (const i of idx){
@@ -921,8 +943,8 @@ function pintarAviso(){
     if (C.picker[i] !== ID_SIN_PICKER){ conPicker++; costoAtribuido += esFalt; }
   }
   const pct = idx.length ? 100 * conPicker / idx.length : 0;
-  if (pct >= 97){ caja.innerHTML = ""; return; }
-  caja.innerHTML =
+  if (pct >= 97){ caja.innerHTML = exclusiones; return; }
+  caja.innerHTML = exclusiones +
     `<div class="aviso">
        <div>
          <strong>${pct.toFixed(0)}% de las líneas tienen picker identificado.</strong>

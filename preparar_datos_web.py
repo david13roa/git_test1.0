@@ -20,12 +20,31 @@ from pathlib import Path
 
 import pandas as pd
 
-from informe_diferencias import (CUADRANTES_CAVA, carga_despachos,
-                                 carga_diferencias, filtra_cuadrantes)
+from informe_diferencias import (CUADRANTES_CAVA, aplica_exclusiones,
+                                 carga_despachos, carga_diferencias,
+                                 carga_exclusiones, filtra_cuadrantes)
 
 
 # Etiqueta de las diferencias cuya entrega no aparece en la hoja de despachos.
 SIN_CRUCE = "SIN CRUCE DE DESPACHO"
+
+
+def resume_excluidas(excluidas) -> dict:
+    """Lo que se dejo por fuera, para que el tablero pueda declararlo."""
+    if excluidas is None or excluidas.empty:
+        return {"lineas": 0, "valor": 0.0, "detalle": []}
+    return {
+        "lineas": int(len(excluidas)),
+        "valor": float(-excluidas["VALOR"].clip(upper=0).sum()),
+        "detalle": [{
+            "fecha": f["FECHA"].strftime("%Y-%m-%d") if pd.notna(f["FECHA"]) else None,
+            "tienda": str(f["TIENDA"]),
+            "material": str(f["DESCRIPCION MATERIAL"]),
+            "unidades": float(f["UNIDADES"]) if pd.notna(f["UNIDADES"]) else None,
+            "valor": float(f["VALOR"]),
+            "motivo": str(f.get("MOTIVO", "")),
+        } for _, f in excluidas.iterrows()],
+    }
 
 
 def indexa(serie: pd.Series) -> tuple[list[str], list[int]]:
@@ -40,13 +59,15 @@ def construye(entrada: Path, hoja_dif="Hoja1", hoja_des="Hoja2",
               cuadrantes=CUADRANTES_CAVA) -> dict:
     """Lee el Excel y devuelve el JSON compacto del tablero."""
     diferencias = filtra_cuadrantes(carga_diferencias(entrada, hoja_dif), cuadrantes)
+    diferencias, excluidas = aplica_exclusiones(diferencias, carga_exclusiones())
     despachos = carga_despachos(entrada, hoja_des)
     df = diferencias.merge(despachos, on="N ENTREGA", how="left")
-    return empaqueta(df, despachos, cuadrantes)
+    return empaqueta(df, despachos, cuadrantes, excluidas)
 
 
 def empaqueta(df: pd.DataFrame, despachos: pd.DataFrame,
-              cuadrantes=CUADRANTES_CAVA) -> dict:
+              cuadrantes=CUADRANTES_CAVA,
+              excluidas: pd.DataFrame | None = None) -> dict:
     """Comprime un cruce ya hecho al formato que consume el tablero web."""
     df = df.copy()
     df["PICKER"] = df["PICKER"].fillna(SIN_CRUCE)
@@ -101,6 +122,7 @@ def empaqueta(df: pd.DataFrame, despachos: pd.DataFrame,
     return {
         "generado": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M"),
         "cuadrantesAnalizados": list(cuadrantes),
+        "excluidas": resume_excluidas(excluidas),
         "origenFecha": origen.strftime("%Y-%m-%d"),
         "dic": {
             "picker": dic_picker,

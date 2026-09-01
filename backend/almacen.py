@@ -17,8 +17,9 @@ from pathlib import Path
 
 import pandas as pd
 
-from informe_diferencias import (CUADRANTES_CAVA, carga_despachos,
-                                 carga_diferencias, filtra_cuadrantes)
+from informe_diferencias import (CUADRANTES_CAVA, aplica_exclusiones,
+                                 carga_despachos, carga_diferencias,
+                                 carga_exclusiones, filtra_cuadrantes)
 
 SIN_CRUCE = "SIN CRUCE DE DESPACHO"
 
@@ -49,6 +50,7 @@ class Dataset:
     despachos: pd.DataFrame
     cuadrantes: tuple[str, ...]
     origen: str
+    excluidas: pd.DataFrame = field(default_factory=pd.DataFrame)
     generado: pd.Timestamp = field(default_factory=pd.Timestamp.now)
 
     @property
@@ -83,6 +85,7 @@ class Almacen:
     def construye(self, ruta: Path, hoja_dif="Hoja1", hoja_des="Hoja2",
                   nombre: str | None = None) -> Dataset:
         diferencias = filtra_cuadrantes(carga_diferencias(ruta, hoja_dif), self._cuadrantes)
+        diferencias, excluidas = aplica_exclusiones(diferencias, carga_exclusiones())
         despachos = carga_despachos(ruta, hoja_des)
         despachos["PICKER"] = despachos["PICKER"].fillna("SIN PICKER")
 
@@ -94,7 +97,8 @@ class Almacen:
             raise DatosInvalidos(
                 "El archivo no tiene ninguna linea de diferencia en los cuadrantes "
                 f"{', '.join(self._cuadrantes)}.")
-        return Dataset(lineas, despachos, self._cuadrantes, nombre or ruta.name)
+        return Dataset(lineas, despachos, self._cuadrantes,
+                       nombre or ruta.name, excluidas)
 
     def carga(self, ruta: Path) -> Dataset:
         dataset = self.construye(ruta)
