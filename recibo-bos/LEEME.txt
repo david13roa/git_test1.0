@@ -17,6 +17,14 @@ RECIBO BOS - INSTALACION EN EL PC DE LA CAVA
 4. IMPRESORA
    - En Windows, deje la Kyocera como impresora PREDETERMINADA.
    - La aplicacion imprime directo en ella, sin preguntar, en carta horizontal.
+   - En la pestana "Impresora" de la aplicacion se configura:
+       * El ahorro de toner del rotulo (recomendado: "Ahorro de toner").
+       * Cual impresora usar, dejarla en una cara + blanco y negro, y abrir sus
+         preferencias para activar EcoPrint (el modo eco del panel no sirve si el
+         controlador de Windows lo apaga).
+       * "Reverso en blanco" si aun asi los rotulos salen a doble cara.
+   - Despues de cambiar la impresora, cierre la ventana de Recibo BOS y abrala de
+     nuevo, e imprima la pagina de prueba (2 rotulos = 2 hojas).
 
 5. USO DIARIO
    - Doble clic en "Recibo BOS" del escritorio.

@@ -60,16 +60,31 @@
     .venc { grid-area: venc; font-size: 140pt; line-height: 1; letter-spacing: -1pt;
             display: flex; align-items: center; justify-content: center; }
 
+    /* Ahorro de tóner (pantalla Impresora). Los números de 200 pt en negrita y los recuadros grises son
+       casi todo el tóner de la hoja; el modo EcoPrint de la impresora no basta si el controlador lo apaga. */
+    .tinta-ahorro .gris, .tinta-maximo .gris { background: none; border: 1.5px solid #000; }
+    .tinta-ahorro .codigo, .tinta-ahorro .cajas b, .tinta-ahorro .posicion, .tinta-ahorro .dia, .tinta-ahorro .venc { font-weight: 400; }
+    .tinta-ahorro .desc, .tinta-maximo .desc { font-weight: 400; }
+    .tinta-ahorro .cajas .saldo, .tinta-maximo .cajas .saldo { background: none; color: #000; border: 2px solid #000; }
+    .tinta-maximo .codigo, .tinta-maximo .cajas b, .tinta-maximo .dia, .tinta-maximo .venc {
+      color: #fff; -webkit-text-stroke: 3px #000; letter-spacing: 2pt; }
+
+    /* Hoja en blanco detrás de cada rótulo, para impresoras que insisten en imprimir a doble cara. */
+    .reverso { display: none; }
+
     @media print {
       html, body { background: #fff; }
       .controles { display: none; }
       .hoja { margin: 0; page-break-after: always; break-after: page; }
-      .hoja:last-child { page-break-after: auto; break-after: auto; }
+      .hoja:last-of-type { page-break-after: auto; break-after: auto; }
       .gris { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .reverso { display: block; height: 1in; page-break-before: always; break-before: page;
+                 page-break-after: always; break-after: page; }
+      .reverso:last-of-type { page-break-after: auto; break-after: auto; }
     }
   </style>
 </head>
-<body>
+<body class="tinta-{{ ajustes.tinta }}">
   <div class="controles">
     <button onclick="window.print()">🖨 Imprimir {{ estibas|length }} rótulo(s)</button>
   </div>
@@ -99,6 +114,7 @@
     </div>
     <div class="venc">{{ vencimiento }}</div>
   </section>
+  {% if ajustes.reverso_blanco %}<div class="reverso"></div>{% endif %}
   {% endfor %}
   {% if imprimir %}
   <script>

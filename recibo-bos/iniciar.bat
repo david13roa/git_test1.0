@@ -15,5 +15,9 @@ start "Recibo BOS - servidor (no cerrar)" /min venv\Scripts\python.exe -m waitre
 timeout /t 3 /nobreak >nul
 
 :abrir
+rem Edge imprime con los ajustes que recuerda de la ultima vez (podian quedar en doble cara):
+rem se dejan en una cara, blanco y negro, sin encabezados y en la impresora predeterminada.
+venv\Scripts\python.exe impresora.py navegador "%LOCALAPPDATA%\ReciboBOS\navegador"
+
 rem --kiosk-printing imprime directo en la impresora predeterminada, sin mostrar el cuadro de impresion.
 start "" msedge --app=http://127.0.0.1:%PUERTO%/recibo --kiosk-printing --user-data-dir="%LOCALAPPDATA%\ReciboBOS\navegador"

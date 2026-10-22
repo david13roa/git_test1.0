@@ -12,6 +12,7 @@ from flask import Flask, abort, jsonify, redirect, render_template, request, sen
 
 import db
 import importar_excel
+import impresora
 from logica import a_entero, calcular, codigo_corto, estibas_del_recibo, normalizar_codigo, texto_qr
 
 app = Flask(__name__)
@@ -21,6 +22,11 @@ CAMPOS_MATERIAL = ["descripcion", "ump", "ums", "cuadrante", "ubicacion", "tendi
                    "vida_util_cedi", "vida_util_tienda", "categoria", "ean"]
 CAMPOS_NUMERICOS = {"tendidos", "pisos", "cajas_estiba", "vida_util_cedi", "vida_util_tienda"}
 DIAS_HABILES_MES = 26
+NIVELES_TINTA = {
+    "normal": "Normal (como el Excel)",
+    "ahorro": "Ahorro de tóner: números sin negrita y sin fondos grises",
+    "maximo": "Máximo ahorro: números grandes solo con el contorno",
+}
 _ultimo_respaldo = None
 
 
@@ -82,19 +88,17 @@ def recibo():
     return render_template("recibo.html", personal=personal, recibos_hoy=hoy, pagina="recibo")
 
 
-@app.route("/rotulo/<int:recibo_id>")
-def rotulo(recibo_id):
-    with db.conectar() as con:
-        r = con.execute("SELECT * FROM recibos WHERE id=?", (recibo_id,)).fetchone()
-    if not r:
-        abort(404)
-    r = dict(r)
+def ajustes_rotulo(args=None):
+    """Ahorro de tóner y reverso en blanco guardados en la pantalla Impresora (la vista previa los puede cambiar)."""
+    args = args or {}
+    tinta = args.get("tinta") or db.leer_config("rotulo_tinta", "ahorro")
+    reverso = args.get("reverso") if "reverso" in args else db.leer_config("rotulo_reverso_blanco", "")
+    return {"tinta": tinta if tinta in NIVELES_TINTA else "ahorro", "reverso_blanco": reverso == "1"}
+
+
+def _render_rotulo(r, estibas):
     vencimiento = _fecha(r["vencimiento"])
     fecha_hora = datetime.fromisoformat(r["fecha_hora"])
-    estibas = estibas_del_recibo(r)
-    solo = request.args.get("estiba", type=int)
-    if solo:
-        estibas = [e for e in estibas if e["numero"] == solo]
     for e in estibas:
         e["qr_texto"] = texto_qr(r["material"], e["cajas"], vencimiento)
         e["qr_svg"] = segno.make(e["qr_texto"], error="m").svg_inline(omitsize=True, border=1)
@@ -102,8 +106,33 @@ def rotulo(recibo_id):
         "rotulo.html", r=r, estibas=estibas, codigo=codigo_corto(r["material"]),
         vencimiento=vencimiento.strftime("%d-%m-%Y") if vencimiento else "",
         fecha_hora=fecha_hora, dia_juliano=fecha_hora.timetuple().tm_yday,
-        imprimir=request.args.get("imprimir") == "1",
+        imprimir=request.args.get("imprimir") == "1", ajustes=ajustes_rotulo(request.args),
     )
+
+
+@app.route("/rotulo/<int:recibo_id>")
+def rotulo(recibo_id):
+    with db.conectar() as con:
+        r = con.execute("SELECT * FROM recibos WHERE id=?", (recibo_id,)).fetchone()
+    if not r:
+        abort(404)
+    r = dict(r)
+    estibas = estibas_del_recibo(r)
+    solo = request.args.get("estiba", type=int)
+    if solo:
+        estibas = [e for e in estibas if e["numero"] == solo]
+    return _render_rotulo(r, estibas)
+
+
+@app.route("/rotulo/muestra")
+def rotulo_muestra():
+    """Rótulo de prueba (2 estibas) para revisar el tóner y que salga uno por hoja."""
+    ahora = datetime.now().replace(microsecond=0)
+    r = {"material": 12000444, "descripcion": "PRUEBA DE IMPRESION - NO PEGAR", "cajas_estiba": 80,
+         "estibas_completas": 1, "saldo": 35, "vencimiento": (ahora.date() + timedelta(days=120)).isoformat(),
+         "fecha_hora": ahora.isoformat(sep=" "), "ubicacion": "A1", "cuadrante": None, "vida_min": 60,
+         "dias_vida_llegada": 120, "lote": "L0001", "oc": "4500000000", "auxiliar": "PRUEBA"}
+    return _render_rotulo(r, estibas_del_recibo(r))
 
 
 def _filtrar_recibos(con, args):
@@ -330,6 +359,46 @@ def personal():
             return redirect(url_for("personal"))
         filas = con.execute("SELECT * FROM personal ORDER BY activo DESC, nombre").fetchall()
     return render_template("personal.html", filas=filas, pagina="personal")
+
+
+def _es_este_pc():
+    return request.remote_addr in ("127.0.0.1", "::1")
+
+
+@app.route("/impresora", methods=["GET", "POST"])
+def impresora_config():
+    mensaje, error = request.args.get("mensaje"), None
+    if request.method == "POST":
+        accion = request.form.get("accion")
+        if accion == "rotulo":
+            tinta = request.form.get("tinta")
+            db.guardar_config("rotulo_tinta", tinta if tinta in NIVELES_TINTA else "ahorro")
+            db.guardar_config("rotulo_reverso_blanco", "1" if request.form.get("reverso") else "")
+            return redirect(url_for("impresora_config", mensaje="Ajustes del rótulo guardados"))
+        acciones = {
+            "predeterminar": (impresora.predeterminar, "Ahora es la impresora predeterminada"),
+            "una_cara": (impresora.una_cara, "Quedó en una cara y blanco y negro"),
+            "preferencias": (impresora.abrir_preferencias, "Se abrió la ventana de preferencias en este PC"),
+        }
+        if accion in acciones:
+            if not _es_este_pc():
+                abort(403)
+            funcion, texto = acciones[accion]
+            nombre = request.form.get("nombre", "")
+            try:
+                funcion(nombre)
+                return redirect(url_for("impresora_config", mensaje=f"{nombre}: {texto}"))
+            except impresora.ErrorImpresora as e:
+                error = str(e)
+    impresoras = None
+    if impresora.ES_WINDOWS and _es_este_pc():
+        try:
+            impresoras = impresora.listar()
+        except (impresora.ErrorImpresora, ValueError) as e:
+            error = error or f"No se pudo leer la lista de impresoras: {e}"
+    return render_template("impresora.html", ajustes=ajustes_rotulo(), niveles=NIVELES_TINTA,
+                           impresoras=impresoras, es_windows=impresora.ES_WINDOWS, mensaje=mensaje, error=error,
+                           pagina="impresora")
 
 
 # ---------------------------------------------------------------- API

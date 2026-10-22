@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block titulo %}Impresora · Recibo BOS{% endblock %}
+{% set duplex_texto = {"OneSided": "Una cara", "TwoSidedLongEdge": "Doble cara", "TwoSidedShortEdge": "Doble cara (borde corto)"} %}
+{% block contenido %}
+<h1>Impresora y rótulos</h1>
+{% if mensaje %}<div class="mensaje">{{ mensaje }}</div>{% endif %}
+{% if error %}<div class="mensaje error">{{ error }}</div>{% endif %}
+
+<div class="recibo-grid">
+  <form class="tarjeta" method="post">
+    <input type="hidden" name="accion" value="rotulo">
+    <h2>Tóner del rótulo</h2>
+    <div class="opciones">
+      {% for clave, texto in niveles.items() %}
+      <label class="opcion"><input type="radio" name="tinta" value="{{ clave }}" {{ 'checked' if ajustes.tinta == clave }}>
+        {{ texto }}{% if clave == 'ahorro' %} <span class="etiqueta cumple">Recomendado</span>{% endif %}</label>
+      {% endfor %}
+    </div>
+    <p class="ayuda">Los números grandes en negrita y los recuadros grises gastan casi todo el tóner de la hoja.
+      Esto se suma al EcoPrint de la impresora.</p>
+
+    <h2 style="margin-top:18px">Una hoja por rótulo</h2>
+    <label class="opcion"><input type="checkbox" name="reverso" value="1" {{ 'checked' if ajustes.reverso_blanco }}>
+      Dejar en blanco el reverso de cada hoja</label>
+    <p class="ayuda">Úselo solo si, después de poner la impresora en «una cara» (abajo), los rótulos siguen saliendo
+      por las dos caras. Si la impresora ya imprime a una cara, esto saca hojas en blanco de más.</p>
+
+    <div class="acciones" style="margin-top:14px">
+      <button class="boton primario" type="submit">Guardar</button>
+      <button class="boton" type="button" id="btn-prueba">🖨 Imprimir página de prueba</button>
+      <span class="atajo">La prueba son 2 rótulos: deben salir en 2 hojas separadas.</span>
+    </div>
+  </form>
+
+  <section class="tarjeta">
+    <h2>Vista previa</h2>
+    <div class="marco-previa"><iframe id="previa" title="Vista previa del rótulo"
+      src="{{ url_for('rotulo_muestra', tinta=ajustes.tinta) }}"></iframe></div>
+  </section>
+</div>
+
+<section class="tarjeta">
+  <h2>Impresora de Windows</h2>
+  {% if impresoras is none %}
+    <p class="ayuda">{% if es_windows %}Esta sección solo se puede usar desde el PC de la cava (donde está instalada la app).
+      {% else %}Esta sección solo funciona en el PC con Windows donde está instalada la app.{% endif %}</p>
+  {% else %}
+  <p class="ayuda" style="margin-top:0">Los rótulos se imprimen en la impresora <b>predeterminada</b>. El modo eco del panel de la
+    Kyocera no sirve si el controlador de Windows lo apaga en cada impresión: actívelo en «Abrir preferencias».</p>
+  <div class="tabla-contenedor">
+    <table>
+      <thead><tr><th>Impresora</th><th>Predeterminada</th><th>Caras</th><th>Color</th><th></th></tr></thead>
+      <tbody>
+      {% for p in impresoras %}
+        <tr>
+          <td><b>{{ p.nombre }}</b></td>
+          <td>{% if p.predeterminada %}<span class="etiqueta cumple">✔ Sí</span>{% endif %}</td>
+          <td>{% if p.duplex and p.duplex != 'OneSided' %}<span class="etiqueta no-cumple">{{ duplex_texto.get(p.duplex, p.duplex) }}</span>
+              {% else %}{{ duplex_texto.get(p.duplex, '—') }}{% endif %}</td>
+          <td>{{ '—' if p.color is none else ('Color' if p.color else 'Blanco y negro') }}</td>
+          <td>
+            <form method="post" class="acciones" style="margin:0">
+              <input type="hidden" name="nombre" value="{{ p.nombre }}">
+              {% if not p.predeterminada %}<button class="boton chico" name="accion" value="predeterminar">Usar esta</button>{% endif %}
+              <button class="boton chico" name="accion" value="una_cara">Una cara + B/N</button>
+              <button class="boton chico" name="accion" value="preferencias">Abrir preferencias (EcoPrint)</button>
+            </form>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5" style="color:var(--gris-500)">Windows no reporta impresoras instaladas.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <h2 style="margin-top:18px">Pasos en «Abrir preferencias» (Kyocera)</h2>
+  <ol class="pasos">
+    <li>Pestaña <b>Imagen</b> o <b>Calidad</b>: marque <b>EcoPrint</b> (ahorro de tóner) y, si aparece, baje la densidad.</li>
+    <li>Pestaña <b>Básica</b> o <b>Diseño</b>: en <b>Impresión a doble cara / Dúplex</b> elija <b>Ninguna</b> (una cara).</li>
+    <li>Clic en <b>Aceptar</b>.</li>
+    <li>Cierre la ventana de Recibo BOS y ábrala otra vez con el acceso directo: así Edge toma los cambios.</li>
+    <li>Imprima la página de prueba.</li>
+  </ol>
+</section>
+
+<iframe id="marco-impresion" title="Impresión de prueba" style="position:absolute;width:0;height:0;border:0;left:-9999px"></iframe>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const formulario = document.querySelector("form[method=post]");
+  function parametros() {
+    const p = new URLSearchParams({ tinta: formulario.tinta.value, reverso: formulario.reverso.checked ? "1" : "" });
+    return p.toString();
+  }
+  formulario.addEventListener("change", () => {
+    document.getElementById("previa").src = "{{ url_for('rotulo_muestra') }}?" + parametros();
+  });
+  document.getElementById("btn-prueba").addEventListener("click", () => {
+    document.getElementById("marco-impresion").src = "{{ url_for('rotulo_muestra') }}?imprimir=1&" + parametros();
+  });
+</script>
+{% endblock %}
