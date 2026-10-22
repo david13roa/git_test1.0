@@ -69,15 +69,22 @@
     <p class="ayuda">{% if es_windows %}Esta sección solo se puede usar desde el PC de la cava (donde está instalada la app).
       {% else %}Esta sección solo funciona en el PC con Windows donde está instalada la app.{% endif %}</p>
   {% else %}
-  <p class="ayuda" style="margin-top:0">Los rótulos se imprimen en la impresora <b>predeterminada</b>. El modo eco del panel de la
+  {% if para_rotulos %}
+  <p class="mensaje" style="margin-top:0">Los rótulos se imprimen en <b>{{ para_rotulos }}</b>. Si no es la Kyocera,
+    presione <b>Usar para rótulos</b> en la fila de la Kyocera.</p>
+  {% else %}
+  <p class="mensaje error" style="margin-top:0">No hay una impresora de papel instalada: solo aparecen impresoras que guardan archivos.</p>
+  {% endif %}
+  <p class="ayuda">Las impresoras de PDF, XPS, OneNote o fax guardan un archivo en vez de imprimir: la app no las usa. El modo eco del panel de la
     Kyocera no sirve si el controlador de Windows lo apaga en cada impresión: actívelo en «Abrir preferencias».</p>
   <div class="tabla-contenedor">
     <table>
-      <thead><tr><th>Impresora</th><th>Predeterminada</th><th>Caras</th><th>Color</th><th></th></tr></thead>
+      <thead><tr><th>Impresora</th><th>Rótulos</th><th>Predeterminada</th><th>Caras</th><th>Color</th><th></th></tr></thead>
       <tbody>
       {% for p in impresoras %}
         <tr>
-          <td><b>{{ p.nombre }}</b></td>
+          <td><b>{{ p.nombre }}</b>{% if p.virtual %} <span class="etiqueta sin-dato">Guarda archivos</span>{% endif %}</td>
+          <td>{% if p.nombre == para_rotulos %}<span class="etiqueta cumple">✔ Aquí</span>{% endif %}</td>
           <td>{% if p.predeterminada %}<span class="etiqueta cumple">✔ Sí</span>{% endif %}</td>
           <td>{% if p.duplex and p.duplex != 'OneSided' %}<span class="etiqueta no-cumple">{{ duplex_texto.get(p.duplex, p.duplex) }}</span>
               {% else %}{{ duplex_texto.get(p.duplex, '—') }}{% endif %}</td>
@@ -85,14 +92,16 @@
           <td>
             <form method="post" class="acciones" style="margin:0">
               <input type="hidden" name="nombre" value="{{ p.nombre }}">
-              {% if not p.predeterminada %}<button class="boton chico" name="accion" value="predeterminar">Usar esta</button>{% endif %}
+              {% if not p.virtual %}
+              {% if p.nombre != para_rotulos %}<button class="boton chico primario" name="accion" value="usar">Usar para rótulos</button>{% endif %}
               <button class="boton chico" name="accion" value="una_cara">Una cara + B/N</button>
               <button class="boton chico" name="accion" value="preferencias">Abrir preferencias (EcoPrint)</button>
+              {% endif %}
             </form>
           </td>
         </tr>
       {% else %}
-        <tr><td colspan="5" style="color:var(--gris-500)">Windows no reporta impresoras instaladas.</td></tr>
+        <tr><td colspan="6" style="color:var(--gris-500)">Windows no reporta impresoras instaladas.</td></tr>
       {% endfor %}
       </tbody>
     </table>

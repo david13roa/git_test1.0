@@ -394,8 +394,20 @@ def impresora_config():
             metodo = request.form.get("metodo")
             db.guardar_config("rotulo_metodo", metodo if metodo in METODOS_IMPRESION else "directa")
             return redirect(url_for("impresora_config", mensaje="Ajustes del rótulo guardados"))
+        if accion == "usar":
+            if not _es_este_pc():
+                abort(403)
+            nombre = request.form.get("nombre", "")
+            if impresora.es_virtual(nombre):
+                error = f"«{nombre}» guarda archivos en vez de imprimir: elija la impresora de papel"
+            else:
+                db.guardar_config("impresora_rotulos", nombre)
+                try:  # también como predeterminada para el método "Por Edge"; si Windows no deja, no importa
+                    impresora.predeterminar(nombre)
+                except impresora.ErrorImpresora:
+                    pass
+                return redirect(url_for("impresora_config", mensaje=f"Los rótulos se imprimirán en {nombre}"))
         acciones = {
-            "predeterminar": (impresora.predeterminar, "Ahora es la impresora predeterminada"),
             "una_cara": (impresora.una_cara, "Quedó en una cara y blanco y negro"),
             "preferencias": (impresora.abrir_preferencias, "Se abrió la ventana de preferencias en este PC"),
         }
@@ -409,16 +421,21 @@ def impresora_config():
                 return redirect(url_for("impresora_config", mensaje=f"{nombre}: {texto}"))
             except impresora.ErrorImpresora as e:
                 error = str(e)
-    impresoras = None
+    impresoras, para_rotulos = None, None
     if impresora.ES_WINDOWS and _es_este_pc():
         try:
             impresoras = impresora.listar()
+            predeterminada = next((p["nombre"] for p in impresoras if p["predeterminada"]), None)
+            para_rotulos = impresora.elegir([p["nombre"] for p in impresoras], predeterminada,
+                                            db.leer_config("impresora_rotulos"))
+            for p in impresoras:
+                p["virtual"] = impresora.es_virtual(p["nombre"])
         except (impresora.ErrorImpresora, ValueError) as e:
             error = error or f"No se pudo leer la lista de impresoras: {e}"
     return render_template("impresora.html", ajustes=ajustes_rotulo(), niveles=NIVELES_TINTA,
                            tonos=TONOS_GRIS, metodos=METODOS_IMPRESION,
                            directa_disponible=impresora.directa_disponible(),
-                           impresoras=impresoras, es_windows=impresora.ES_WINDOWS, mensaje=mensaje, error=error,
+                           impresoras=impresoras, para_rotulos=para_rotulos, es_windows=impresora.ES_WINDOWS, mensaje=mensaje, error=error,
                            pagina="impresora")
 
 
@@ -525,7 +542,7 @@ def api_imprimir():
     url = f"http://127.0.0.1:{request.environ.get('SERVER_PORT', '8080')}{partes.path}" + (f"?{consulta}" if consulta else "")
     try:
         with _impresion:
-            nombre = impresora.imprimir_url(url)
+            nombre = impresora.imprimir_url(url, db.leer_config("impresora_rotulos"))
     except impresora.ErrorImpresora as e:
         return jsonify({"error": str(e)}), 500
     except Exception as e:  # errores de Windows o del controlador

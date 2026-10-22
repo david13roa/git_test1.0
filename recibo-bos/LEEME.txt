@@ -23,6 +23,8 @@ RECIBO BOS - INSTALACION EN EL PC DE LA CAVA
      internet) para instalar las librerias nuevas.
    - En la pestana "Impresora" de la aplicacion se configura:
        * Como imprimir: "Directa" (recomendado) o "Por Edge" como antes.
+       * En que impresora salen los rotulos ("Usar para rotulos"). La app nunca
+         usa "Microsoft Print to PDF" ni otras que guardan archivos.
        * El ahorro de toner del rotulo (recomendado: "Modo eco", numeros en gris;
          el tono del gris se puede aclarar u oscurecer).
        * Cual impresora usar, dejarla en una cara + blanco y negro, y abrir sus

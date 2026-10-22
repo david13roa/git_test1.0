@@ -10,7 +10,7 @@ Como Edge puede seguir imprimiendo a doble cara aunque se corrijan ambos, la "im
 no usa el cuadro de impresión de Edge: convierte el rótulo en PDF con Edge sin ventana y lo manda
 a la impresora predeterminada desde Python, pidiéndole al controlador una cara en cada trabajo.
 
-Uso desde iniciar.bat, antes de abrir Edge:
+Uso desde iniciar.bat, antes de abrir Edge (también deja de predeterminada una impresora de papel):
     python impresora.py navegador "%LOCALAPPDATA%\\ReciboBOS\\navegador"
 """
 import json
@@ -115,6 +115,26 @@ DM_OUT_BUFFER, DM_IN_BUFFER = 2, 8
 PHYSICALWIDTH, PHYSICALHEIGHT, PHYSICALOFFSETX, PHYSICALOFFSETY = 110, 111, 112, 113
 
 
+# Impresoras que no imprimen en papel: con ellas Windows abre el cuadro "Guardar como".
+VIRTUALES = ("pdf", "xps", "onenote", "fax", "send to", "enviar a")
+
+
+def es_virtual(nombre):
+    return any(v in nombre.lower() for v in VIRTUALES)
+
+
+def elegir(nombres, predeterminada=None, configurada=None):
+    """Impresora para los rótulos: la elegida en la app; si no, la predeterminada si es de papel;
+    si no, la primera Kyocera o la primera de papel. None si solo hay impresoras virtuales."""
+    if configurada in nombres:
+        return configurada
+    fisicas = [n for n in nombres if not es_virtual(n)]
+    if predeterminada in fisicas:
+        return predeterminada
+    kyocera = [n for n in fisicas if "kyocera" in n.lower()]
+    return (kyocera or fisicas or [None])[0]
+
+
 def directa_disponible():
     """La impresión directa necesita Windows, Edge y las librerías que instala instalar.bat."""
     if not ES_WINDOWS:
@@ -183,14 +203,24 @@ def _modo_una_cara(win32print, manejador, nombre):
     return modo
 
 
-def imprimir_pdf(ruta_pdf, titulo="Rótulo Recibo BOS"):
-    """Imprime el PDF en la impresora predeterminada, una hoja por página y a una sola cara."""
+def imprimir_pdf(ruta_pdf, configurada=None, titulo="Rótulo Recibo BOS"):
+    """Imprime el PDF en la impresora de los rótulos, una hoja por página y a una sola cara."""
     try:
         import win32gui, win32print, win32ui
         from PIL import ImageWin
     except ImportError:
         raise ErrorImpresora("Faltan librerías para imprimir directo: ejecute instalar.bat otra vez")
-    nombre = win32print.GetDefaultPrinter()
+    nombres = [p["pPrinterName"] for p in win32print.EnumPrinters(
+        win32print.PRINTER_ENUM_LOCAL | win32print.PRINTER_ENUM_CONNECTIONS, None, 4)]
+    try:
+        predeterminada = win32print.GetDefaultPrinter()
+    except Exception:  # Windows sin impresora predeterminada
+        predeterminada = None
+    nombre = elegir(nombres, predeterminada, configurada)
+    if not nombre:
+        raise ErrorImpresora("No hay ninguna impresora de papel instalada (solo PDF o similares)")
+    if es_virtual(nombre):
+        raise ErrorImpresora(f"«{nombre}» guarda archivos en vez de imprimir: elija la Kyocera en la pestaña Impresora")
     manejador = win32print.OpenPrinter(nombre)
     try:
         modo = _modo_una_cara(win32print, manejador, nombre)
@@ -218,13 +248,13 @@ def imprimir_pdf(ruta_pdf, titulo="Rótulo Recibo BOS"):
     return nombre
 
 
-def imprimir_url(url):
-    """Rótulo (URL de la app) -> PDF -> impresora predeterminada a una cara. Devuelve el nombre de la impresora."""
+def imprimir_url(url, configurada=None):
+    """Rótulo (URL de la app) -> PDF -> impresora de los rótulos a una cara. Devuelve el nombre de la impresora."""
     carpeta = tempfile.mkdtemp(prefix="recibo-bos-")
     try:
         ruta = os.path.join(carpeta, "rotulo.pdf")
         pagina_a_pdf(url, ruta)
-        return imprimir_pdf(ruta)
+        return imprimir_pdf(ruta, configurada)
     finally:
         shutil.rmtree(carpeta, ignore_errors=True)
 
@@ -276,8 +306,23 @@ def ajustar_navegador(carpeta_perfil):
     return True
 
 
+def corregir_predeterminada(configurada=None):
+    """Si la predeterminada de Windows guarda archivos (PDF, OneNote…), Edge pediría "Guardar como":
+    se cambia por la impresora de los rótulos."""
+    impresoras = listar()
+    actual = next((p["nombre"] for p in impresoras if p["predeterminada"]), None)
+    nombre = elegir([p["nombre"] for p in impresoras], actual, configurada)
+    if nombre and nombre != actual and (actual is None or es_virtual(actual) or configurada == nombre):
+        predeterminar(nombre)
+
+
 if __name__ == "__main__":
     if len(sys.argv) == 3 and sys.argv[1] == "navegador":
         ajustar_navegador(sys.argv[2])
+        try:
+            import db
+            corregir_predeterminada(db.leer_config("impresora_rotulos"))
+        except Exception as e:  # sin esto la app igual abre
+            print(f"No se pudo revisar la impresora predeterminada: {e}")
     else:
         print(__doc__)
