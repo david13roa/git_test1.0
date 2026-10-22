@@ -10,3 +10,6 @@ datos/
 INFORME_PICKERS_*.xlsx
 datos.json
 tablero_diferencias.html
+
+# Paquetes generados para copiar al PC
+*.zip
