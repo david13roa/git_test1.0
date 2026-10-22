@@ -1,0 +1,33 @@
+RECIBO BOS - INSTALACION EN EL PC DE LA CAVA
+============================================
+
+1. INSTALAR PYTHON (una sola vez)
+   - Descargue Python desde https://www.python.org/downloads/
+   - Al instalar, marque la casilla "Add python.exe to PATH".
+
+2. COPIAR LA CARPETA
+   - Copie la carpeta recibo-bos completa al PC, por ejemplo en C:\ReciboBOS
+   - Ponga dentro de la carpeta el archivo Excel de rotulos (.xlsm) para cargar
+     el portafolio, el personal y el consolidado.
+
+3. INSTALAR
+   - Doble clic en instalar.bat (necesita internet la primera vez).
+   - Se crea el acceso directo "Recibo BOS" en el escritorio.
+
+4. IMPRESORA
+   - En Windows, deje la Kyocera como impresora PREDETERMINADA.
+   - La aplicacion imprime directo en ella, sin preguntar, en carta horizontal.
+
+5. USO DIARIO
+   - Doble clic en "Recibo BOS" del escritorio.
+   - Se abre una ventana minimizada "Recibo BOS - servidor": NO la cierre.
+   - Opcional: para que arranque sola al prender el PC, copie el acceso directo
+     en la carpeta que abre Windows+R > shell:startup
+
+COPIAS DE SEGURIDAD
+   - La aplicacion guarda una copia diaria en datos\respaldos (ultimos 30 dias).
+   - Para restaurar: cierre la aplicacion y reemplace datos\recibo_bos.db
+     por la copia del dia que necesite.
+
+PLAN DE CONTINGENCIA
+   - Si el PC falla, se trabaja ese dia con el Excel y luego se registra.

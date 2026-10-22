@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Rótulo {{ r.material }} · Recibo BOS</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+  <style>
+    /* Hoja carta horizontal, una estiba por hoja (impresora Kyocera, papel normal).
+       Distribución tomada del rótulo impreso desde el Excel (área B15:Q24). */
+    @page { size: letter landscape; margin: 0.3in; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: #d5d5da; }
+    body { font-family: Arial, Helvetica, sans-serif; font-weight: 700; color: #000; }
+
+    .controles { font-family: "Segoe UI", system-ui, Arial, sans-serif; padding: 12px; text-align: center; }
+    .controles button { font: inherit; font-weight: 700; padding: 10px 22px; border-radius: 6px; border: 0; background: #e90729; color: #fff; cursor: pointer; }
+
+    .hoja {
+      width: 10.3in; height: 7.85in; margin: 0 auto 0.3in; background: #fff; padding: 0.1in 0.15in;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 3.2in;
+      grid-template-rows: 0.7in 2.3in 2.45in 0.5in 1.75in;
+      grid-template-areas:
+        "desc   desc"
+        "codigo qr"
+        "cajas  derecha"
+        "info   info"
+        "venc   venc";
+      overflow: hidden;
+    }
+    /* Las celdas amarillas del Excel salen grises en la impresora: se conservan como recuadros grises. */
+    .gris { background: #e4e4e4; border: 1px solid #bdbdbd; }
+
+    .desc { grid-area: desc; font-family: "Arial Narrow", Arial, sans-serif; font-weight: 700; font-size: 30pt;
+            line-height: 1; text-transform: uppercase; display: flex; align-items: center; justify-content: center;
+            text-align: center; overflow: hidden; }
+    .codigo { grid-area: codigo; font-size: 215pt; line-height: 0.8; letter-spacing: -2pt;
+              display: flex; align-items: center; justify-content: center; }
+    .qr { grid-area: qr; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .qr svg { width: 2.6in; height: 2.6in; display: block; }
+    .qr small { font-weight: 400; font-size: 9pt; margin-top: 2px; }
+
+    .cajas { grid-area: cajas; position: relative; margin: 0.05in 0.15in 0.05in 0; border-radius: 4px;
+             display: flex; align-items: center; justify-content: center; }
+    .cajas b { font-size: 225pt; line-height: 0.8; letter-spacing: -2pt; }
+    .cajas .rot { position: absolute; top: 6px; left: 10px; font-size: 11pt; font-weight: 400; }
+    .cajas .saldo { position: absolute; top: 8px; right: 10px; background: #000; color: #fff; padding: 3px 12px; font-size: 22pt; }
+
+    .derecha { grid-area: derecha; display: grid; grid-template-columns: 0.35in 1fr; grid-template-rows: 1fr 1.25fr; }
+    .posicion-rot { writing-mode: vertical-rl; transform: rotate(180deg); font-size: 11pt; font-weight: 400;
+                    display: flex; align-items: center; justify-content: center; }
+    .posicion { margin: 0.05in 0; border-radius: 4px; font-size: 58pt; display: flex; align-items: center; justify-content: center; }
+    .dia { grid-column: 1 / -1; font-size: 120pt; line-height: 1; display: flex; align-items: center; justify-content: center; }
+
+    .info { grid-area: info; display: flex; justify-content: space-between; align-items: center; gap: 10px;
+            font-size: 15pt; font-weight: 400; padding: 0 0.1in; }
+    .info b { font-weight: 700; }
+    .info small { font-size: 9pt; color: #333; }
+
+    .venc { grid-area: venc; font-size: 140pt; line-height: 1; letter-spacing: -1pt;
+            display: flex; align-items: center; justify-content: center; }
+
+    @media print {
+      html, body { background: #fff; }
+      .controles { display: none; }
+      .hoja { margin: 0; page-break-after: always; break-after: page; }
+      .hoja:last-child { page-break-after: auto; break-after: auto; }
+      .gris { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+  <div class="controles">
+    <button onclick="window.print()">🖨 Imprimir {{ estibas|length }} rótulo(s)</button>
+  </div>
+  {% for e in estibas %}
+  <section class="hoja">
+    <div class="desc">{{ r.descripcion }}</div>
+    <div class="codigo">{{ codigo }}</div>
+    <div class="qr">{{ e.qr_svg|safe }}<small>{{ e.qr_texto }}</small></div>
+    <div class="cajas gris">
+      <span class="rot">CAJAS X ESTIBA</span>
+      {% if e.es_saldo %}<span class="saldo">SALDO</span>{% endif %}
+      <b>{{ e.cajas }}</b>
+    </div>
+    <div class="derecha">
+      <div class="posicion-rot">POSICIÓN</div>
+      <div class="posicion gris">{{ r.ubicacion or r.cuadrante or '0' }}</div>
+      <div class="dia">{{ '%03d' % dia_juliano }}</div>
+    </div>
+    <div class="info">
+      <span>{{ fecha_hora.strftime('%d/%m/%Y %H:%M') }}</span>
+      <span><small>VIDA MÍN</small> <b>{{ r.vida_min or '—' }}</b></span>
+      <span><small>DÍAS</small> <b>{{ r.dias_vida_llegada }}</b></span>
+      <span><small>LOTE</small> <b>{{ r.lote or '—' }}</b></span>
+      <span><small>O.C</small> {{ r.oc }}</span>
+      <span><small>EST.</small> <b>{{ e.numero }}/{{ e.total }}</b></span>
+      <span>{{ r.auxiliar }}</span>
+    </div>
+    <div class="venc">{{ vencimiento }}</div>
+  </section>
+  {% endfor %}
+  {% if imprimir %}
+  <script>
+    window.addEventListener("afterprint", () => parent.postMessage("rotulo-impreso", location.origin));
+    window.addEventListener("load", () => setTimeout(() => window.print(), 150));
+  </script>
+  {% endif %}
+</body>
+</html>

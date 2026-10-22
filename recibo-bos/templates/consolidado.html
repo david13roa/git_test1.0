@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block titulo %}Consolidado · Recibo BOS{% endblock %}
+{% block contenido %}
+<h1>Consolidado diario</h1>
+
+<form class="tarjeta filtros" method="get">
+  <div><label for="desde">Desde</label><input id="desde" type="date" name="desde" value="{{ f.desde or '' }}"></div>
+  <div><label for="hasta">Hasta</label><input id="hasta" type="date" name="hasta" value="{{ f.hasta or '' }}"></div>
+  <div><label for="oc">O.C</label><input id="oc" name="oc" value="{{ f.oc or '' }}" inputmode="numeric"></div>
+  <div><label for="material">Material o descripción</label><input id="material" name="material" value="{{ f.material or '' }}"></div>
+  <div><label for="auxiliar">Auxiliar</label>
+    <select id="auxiliar" name="auxiliar">
+      <option value="">Todos</option>
+      {% for p in personal %}<option {{ 'selected' if f.auxiliar == p }}>{{ p }}</option>{% endfor %}
+    </select></div>
+  <div><label for="status">Status entrada</label>
+    <select id="status" name="status">
+      <option value="">Todos</option>
+      {% for s in ['CUMPLE', 'NO CUMPLE', 'SIN DATO'] %}<option {{ 'selected' if f.status == s }}>{{ s }}</option>{% endfor %}
+    </select></div>
+  <div style="min-width:auto;flex-direction:row;gap:8px">
+    <button class="boton primario" type="submit">Filtrar</button>
+    <a class="boton" href="{{ url_for('consolidado_excel', **f) }}">⬇ Excel</a>
+    <a class="boton" href="{{ url_for('consolidado', desde='') }}">Ver todo</a>
+  </div>
+</form>
+
+<div class="indicadores">
+  <div class="indicador"><b>{{ totales.recibos }}</b><span>Registros</span></div>
+  <div class="indicador"><b>{{ '{:,}'.format(totales.cajas).replace(',', '.') }}</b><span>Cajas recibidas</span></div>
+  <div class="indicador"><b>{{ totales.estibas }}</b><span>Estibas rotuladas</span></div>
+  <div class="indicador"><b>{{ totales.no_cumple }}</b><span>Recibidos NO CUMPLE</span></div>
+</div>
+
+<div class="tarjeta tabla-contenedor" style="padding:0;max-height:70vh">
+  <table>
+    <thead><tr>
+      <th>Fecha</th><th>O.C</th><th>Material</th><th>Descripción</th><th class="num">Cajas</th><th>F. vencimiento</th>
+      <th>Lote</th><th>Aux. recibo</th><th class="num">Est. completa</th><th class="num">Saldo</th>
+      <th class="num">Vida mín.</th><th class="num">Vida llegada</th><th>Status entrada</th>
+      <th class="num">Vida hoy</th><th>Status CEDI</th><th class="num">TTL estibas</th><th>Cuadrante</th><th>Autorizó</th><th></th>
+    </tr></thead>
+    <tbody>
+    {% for r in filas %}
+      <tr class="{{ 'anulado' if r.anulado }}">
+        <td>{{ r.fecha_hora[:16] }}</td><td>{{ r.oc }}</td><td>{{ r.material }}</td><td>{{ r.descripcion }}</td>
+        <td class="num">{{ r.cantidad }}</td><td>{{ r.vencimiento or '' }}</td><td>{{ r.lote or '' }}</td><td>{{ r.auxiliar or '' }}</td>
+        <td class="num">{{ r.estibas_completas }}</td><td class="num">{{ r.saldo }}</td>
+        <td class="num">{{ r.vida_min if r.vida_min is not none else '' }}</td>
+        <td class="num">{{ r.dias_vida_llegada if r.dias_vida_llegada is not none else '' }}</td>
+        <td><span class="etiqueta {{ (r.status_entrada or '')|lower|replace(' ', '-') }}">{{ r.status_entrada or '' }}</span></td>
+        <td class="num">{{ r.dias_vida_hoy if r.dias_vida_hoy is not none else '' }}</td>
+        <td>{{ r.status_cedi }}</td><td class="num">{{ r.total_estibas }}</td><td>{{ r.cuadrante or '' }}</td>
+        <td>{{ r.autorizado_por or '' }}</td>
+        <td>
+          {% if not r.anulado %}
+          <a class="boton chico" href="{{ url_for('rotulo', recibo_id=r.id) }}" target="_blank">Reimprimir</a>
+          <button class="boton chico" type="button" onclick="anular({{ r.id }})">Anular</button>
+          {% endif %}
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="19" style="color:var(--gris-500)">No hay recibos con esos filtros.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  async function anular(id) {
+    const motivo = prompt("¿Por qué se anula este recibo? (queda registrado)");
+    if (!motivo) return;
+    await fetch(`/api/recibos/${id}/anular`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ motivo }),
+    });
+    location.reload();
+  }
+</script>
+{% endblock %}

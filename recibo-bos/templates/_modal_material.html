@@ -1,0 +1,28 @@
+<dialog id="modal-material">
+  <form method="dialog" id="form-material">
+    <header id="modal-material-titulo">Material del portafolio</header>
+    <div class="cuerpo">
+      <div id="modal-material-error" class="mensaje error" hidden></div>
+      <div class="form-grid">
+        <div><label for="m-material">Material (8 dígitos)</label><input id="m-material" name="material" inputmode="numeric" required></div>
+        <div><label for="m-ean">Código EAN</label><input id="m-ean" name="ean" inputmode="numeric"></div>
+        <div class="doble"><label for="m-descripcion">Texto breve de material</label><input id="m-descripcion" name="descripcion" required></div>
+        <div><label for="m-tendidos">Tendidos</label><input id="m-tendidos" name="tendidos" type="number" min="0"></div>
+        <div><label for="m-pisos">Pisos</label><input id="m-pisos" name="pisos" type="number" min="0"></div>
+        <div><label for="m-cajas">Cajas x estiba</label><input id="m-cajas" name="cajas_estiba" type="number" min="1" required>
+          <span class="ayuda">Se calcula con tendidos × pisos</span></div>
+        <div><label for="m-ump">UMP (und x caja)</label><input id="m-ump" name="ump"></div>
+        <div><label for="m-ums">UMS</label><input id="m-ums" name="ums"></div>
+        <div><label for="m-cuadrante">Cuadrante</label><input id="m-cuadrante" name="cuadrante"></div>
+        <div><label for="m-ubicacion">Ubicación</label><input id="m-ubicacion" name="ubicacion"></div>
+        <div><label for="m-vida-cedi">Vida útil CEDI (días)</label><input id="m-vida-cedi" name="vida_util_cedi" type="number" min="0"></div>
+        <div><label for="m-vida-tienda">Vida útil tienda (días)</label><input id="m-vida-tienda" name="vida_util_tienda" type="number" min="0"></div>
+        <div><label for="m-categoria">Categoría</label><input id="m-categoria" name="categoria"></div>
+      </div>
+    </div>
+    <footer>
+      <button type="button" class="boton" value="cancelar" id="m-cancelar">Cancelar</button>
+      <button type="submit" class="boton primario" value="guardar">Guardar material</button>
+    </footer>
+  </form>
+</dialog>

@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titulo %}Recibo BOS{% endblock %}</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+</head>
+<body>
+  <header class="barra">
+    <div class="marca"><img class="marca-logo" src="{{ url_for('static', filename='logo-d1.png') }}" alt="D1"><span class="marca-texto">Recibo <b>BOS</b></span></div>
+    <nav class="nav">
+      <a href="{{ url_for('recibo') }}" class="{{ 'activo' if pagina == 'recibo' }}">Recibo</a>
+      <a href="{{ url_for('consolidado') }}" class="{{ 'activo' if pagina == 'consolidado' }}">Consolidado</a>
+      <a href="{{ url_for('cruce') }}" class="{{ 'activo' if pagina == 'cruce' }}">Cruce SAP</a>
+      <a href="{{ url_for('portafolio') }}" class="{{ 'activo' if pagina == 'portafolio' }}">Portafolio</a>
+      <a href="{{ url_for('personal') }}" class="{{ 'activo' if pagina == 'personal' }}">Personal</a>
+      <a href="{{ url_for('indicadores') }}" class="{{ 'activo' if pagina == 'indicadores' }}">Indicadores</a>
+    </nav>
+  </header>
+  <main>
+    {% block contenido %}{% endblock %}
+  </main>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

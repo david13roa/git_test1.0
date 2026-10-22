@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block titulo %}Portafolio · Recibo BOS{% endblock %}
+{% block contenido %}
+<h1>Portafolio <small style="color:var(--gris-500);font-weight:600">{{ total }} materiales</small></h1>
+{% if mensaje %}<div class="mensaje">{{ mensaje }}</div>{% endif %}
+
+<div class="tarjeta filtros">
+  <form method="get" class="filtros" style="flex:1">
+    <div style="flex:1"><label for="q">Buscar por código, descripción o EAN</label><input id="q" name="q" value="{{ q }}" autofocus></div>
+    <div style="min-width:auto"><button class="boton" type="submit">Buscar</button></div>
+  </form>
+  <div style="min-width:auto"><button class="boton primario" type="button" id="btn-nuevo">+ Nuevo material</button></div>
+  <form method="post" action="{{ url_for('portafolio_importar') }}" enctype="multipart/form-data" class="filtros">
+    <div><label for="archivo">Actualizar desde Excel (hoja PORTAFOLIO)</label><input id="archivo" type="file" name="archivo" accept=".xlsx,.xlsm"></div>
+    <div style="min-width:auto"><button class="boton" type="submit">Cargar</button></div>
+  </form>
+</div>
+
+<div class="tarjeta tabla-contenedor" style="padding:0;max-height:70vh">
+  <table>
+    <thead><tr><th>Material</th><th>Descripción</th><th class="num">Tendidos</th><th class="num">Pisos</th>
+      <th class="num">Cajas x estiba</th><th>Cuadrante</th><th>Ubicación</th><th class="num">Vida CEDI</th>
+      <th class="num">Vida tienda</th><th>Categoría</th><th>EAN</th><th></th></tr></thead>
+    <tbody>
+    {% for m in filas %}
+      <tr>
+        <td>{{ m.material }}</td><td>{{ m.descripcion }}</td>
+        <td class="num">{{ m.tendidos or '' }}</td><td class="num">{{ m.pisos or '' }}</td>
+        <td class="num"><b>{{ m.cajas_estiba or '' }}</b></td><td>{{ m.cuadrante or '' }}</td><td>{{ m.ubicacion or '' }}</td>
+        <td class="num">{{ m.vida_util_cedi or '' }}</td><td class="num">{{ m.vida_util_tienda or '' }}</td>
+        <td>{{ m.categoria or '' }}</td><td>{{ m.ean or '' }}</td>
+        <td><button class="boton chico" type="button" data-material='{{ m|tojson }}'>Editar</button></td>
+      </tr>
+    {% else %}
+      <tr><td colspan="12" style="color:var(--gris-500)">No se encontraron materiales.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% include "_modal_material.html" %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='material.js') }}"></script>
+<script>
+  const recargar = () => location.reload();
+  document.getElementById("btn-nuevo").addEventListener("click", () => ModalMaterial.abrir({}, "Nuevo material", recargar));
+  document.querySelectorAll("[data-material]").forEach((b) => b.addEventListener("click", () =>
+    ModalMaterial.abrir({ ...JSON.parse(b.dataset.material), _existente: true }, "Editar material", recargar)));
+</script>
+{% endblock %}

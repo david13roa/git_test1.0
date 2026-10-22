@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block titulo %}Cruce SAP · Recibo BOS{% endblock %}
+{% block contenido %}
+<h1>Cruce SAP y conteo</h1>
+
+<form class="tarjeta" method="post">
+  <div class="form-grid">
+    <div><label for="oc">Nº orden de compra</label><input id="oc" name="oc" value="{{ oc }}" inputmode="numeric" required></div>
+    <div class="doble">
+      <label for="sap">Pegue desde SAP o Excel las columnas <b>Material</b> y <b>Cantidad</b></label>
+      <textarea id="sap" name="sap" rows="7" placeholder="12005445	100&#10;12004952	80">{{ sap }}</textarea>
+      <span class="ayuda">Se suman todas las estibas y lotes del mismo material dentro de esta O.C.</span>
+    </div>
+  </div>
+  <div class="acciones" style="margin-top:12px"><button class="boton primario" type="submit">Cruzar</button></div>
+</form>
+
+{% if oc %}
+<div class="tarjeta tabla-contenedor" style="padding:0">
+  <table>
+    <thead><tr><th>Material</th><th>Descripción</th><th class="num">Registros</th><th class="num">Conteo recibo</th>
+      <th class="num">SAP</th><th class="num">Diferencia</th></tr></thead>
+    <tbody>
+    {% for f in filas %}
+      <tr>
+        <td>{{ f.material }}</td><td>{{ f.descripcion }}</td><td class="num">{{ f.registros }}</td>
+        <td class="num">{{ f.conteo }}</td><td class="num">{{ f.sap if f.sap is not none else '—' }}</td>
+        <td class="num {{ 'dif-ok' if f.diferencia == 0 else 'dif-mal' }}">
+          {% if f.diferencia is none %}—{% elif f.diferencia == 0 %}✔ 0{% else %}{{ '%+d' % f.diferencia }}{% endif %}
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="6" style="color:var(--gris-500)">No hay recibos para la O.C {{ oc }}.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

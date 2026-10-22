@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block titulo %}Personal · Recibo BOS{% endblock %}
+{% block contenido %}
+<h1>Personal de recibo</h1>
+
+<form class="tarjeta filtros" method="post">
+  <input type="hidden" name="accion" value="agregar">
+  <div style="flex:1"><label for="nombre">Nombre completo</label><input id="nombre" name="nombre" required></div>
+  <div style="min-width:auto"><button class="boton primario" type="submit">+ Agregar</button></div>
+</form>
+
+<div class="tarjeta tabla-contenedor" style="padding:0">
+  <table>
+    <thead><tr><th>Nombre</th><th>Estado</th><th></th></tr></thead>
+    <tbody>
+    {% for p in filas %}
+      <tr class="{{ '' if p.activo else 'anulado' }}">
+        <td>{{ p.nombre }}</td>
+        <td>{{ 'Activo' if p.activo else 'Inactivo' }}</td>
+        <td>
+          <form method="post" style="margin:0">
+            <input type="hidden" name="id" value="{{ p.id }}">
+            <button class="boton chico" name="accion" value="{{ 'desactivar' if p.activo else 'activar' }}">
+              {{ 'Desactivar' if p.activo else 'Activar' }}</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

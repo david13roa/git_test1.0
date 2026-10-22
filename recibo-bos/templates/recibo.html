@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block titulo %}Recibo · Recibo BOS{% endblock %}
+{% block contenido %}
+<div id="aviso" class="mensaje" hidden></div>
+
+<div class="recibo-grid">
+  <section class="tarjeta">
+    <div class="oc-caja">
+      <label for="oc">Nº ORDEN DE COMPRA</label>
+      <input id="oc" inputmode="numeric" autocomplete="off" placeholder="4500000000">
+    </div>
+
+    <form id="form-recibo" class="hoja" autocomplete="off">
+      <div class="rotulo-campo"><label for="codigo" style="color:inherit">Ingrese el código del material</label></div>
+      <div class="valor">
+        <input id="codigo" inputmode="numeric" placeholder="Ej: 444 o EAN" autofocus>
+        <div class="ayuda">Últimos dígitos (444 → 12000444), código completo o escanee el EAN</div>
+      </div>
+
+      <div class="rotulo-campo"><label for="cantidad" style="color:inherit">Cantidad</label></div>
+      <div class="valor"><input id="cantidad" type="number" min="1" inputmode="numeric" placeholder="Cajas"></div>
+
+      <div class="rotulo-campo"><label for="vencimiento" style="color:inherit">Fecha de vencimiento</label></div>
+      <div class="valor"><input id="vencimiento" type="date"></div>
+
+      <div class="rotulo-campo"><label for="patron" style="color:inherit">Patrón de estibado</label></div>
+      <div class="valor">
+        <input id="patron" type="number" min="1" inputmode="numeric" placeholder="Opcional">
+        <div class="ayuda">Déjelo vacío para usar las cajas x estiba del portafolio</div>
+      </div>
+
+      <div class="rotulo-campo"><label for="lote" style="color:inherit">Lote</label></div>
+      <div class="valor"><input id="lote" placeholder="Lote del proveedor"></div>
+
+      <div class="rotulo-campo"><label for="auxiliar" style="color:inherit">Auxiliar de recibo</label></div>
+      <div class="valor">
+        <select id="auxiliar">
+          <option value="">— Seleccione —</option>
+          {% for p in personal %}<option>{{ p }}</option>{% endfor %}
+        </select>
+      </div>
+    </form>
+
+    <div class="acciones" style="margin-top:16px">
+      <button id="btn-guardar" class="boton primario grande" type="button">🖨 Guardar e imprimir</button>
+      <button id="btn-limpiar" class="boton" type="button">Limpiar</button>
+      <span class="atajo">Enter pasa al siguiente campo · Ctrl+Enter guarda e imprime</span>
+    </div>
+  </section>
+
+  <section class="tarjeta">
+    <div id="descripcion" class="descripcion-material vacio">Digite un código de material</div>
+
+    <div class="calculos">
+      <div class="celda-calc"><span>Estibas completas</span><b id="c-completas">—</b> <small>× <b id="c-cajas" style="font-size:18px">—</b> cajas</small></div>
+      <div class="celda-calc"><span>Estiba con saldo</span><b id="c-saldo-n">—</b> <small>× <b id="c-saldo" style="font-size:18px">—</b> cajas</small></div>
+      <div class="celda-calc"><span>Vida útil mín. CEDI</span><b id="c-vida-min">—</b></div>
+      <div class="celda-calc"><span>Días de vida</span><b id="c-dias">—</b></div>
+      <div id="c-status" class="celda-calc status ancha"><span>Status de entrada</span><b id="c-status-txt">—</b></div>
+      <div class="celda-calc"><span>Posición</span><b id="c-posicion">—</b></div>
+      <div class="celda-calc"><span>Total rótulos</span><b id="c-total">—</b></div>
+    </div>
+
+    <h2>Vista previa del rótulo</h2>
+    <div class="previa">
+      <div class="p-desc" id="p-desc">&nbsp;</div>
+      <div class="p-codigo" id="p-codigo">----</div>
+      <div class="p-cajas" id="p-cajas">0</div>
+      <div class="p-venc" id="p-venc">dd-mm-aaaa</div>
+      <div class="p-nota">Se imprime una hoja carta horizontal por estiba, con su QR para el montacarguista.</div>
+    </div>
+  </section>
+</div>
+
+<section class="tarjeta">
+  <h2>Recibos de hoy</h2>
+  <div class="tabla-contenedor">
+    <table>
+      <thead><tr><th>Hora</th><th>O.C</th><th>Material</th><th>Descripción</th><th class="num">Cajas</th>
+        <th class="num">Estibas</th><th>Vence</th><th>Lote</th><th>Status</th><th>Auxiliar</th><th></th></tr></thead>
+      <tbody>
+      {% for r in recibos_hoy %}
+        <tr>
+          <td>{{ r.fecha_hora[11:16] }}</td><td>{{ r.oc }}</td><td>{{ r.material }}</td><td>{{ r.descripcion }}</td>
+          <td class="num">{{ r.cantidad }}</td>
+          <td class="num">{{ r.estibas_completas }}{% if r.saldo %} + 1{% endif %}</td>
+          <td>{{ r.vencimiento }}</td><td>{{ r.lote or '' }}</td>
+          <td><span class="etiqueta {{ r.status_entrada|lower|replace(' ', '-') }}">{{ r.status_entrada }}</span></td>
+          <td>{{ r.auxiliar }}</td>
+          <td><a class="boton chico" href="{{ url_for('rotulo', recibo_id=r.id) }}" target="_blank">Reimprimir</a></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="11" style="color:var(--gris-500)">Todavía no hay recibos hoy.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<dialog id="modal-autorizar">
+  <form method="dialog" id="form-autorizar">
+    <header class="alerta">⚠ Producto NO CUMPLE la vida útil mínima</header>
+    <div class="cuerpo">
+      <p id="autorizar-texto"></p>
+      <div class="form-grid">
+        <div class="doble"><label for="autorizado_por">¿Quién autoriza recibirlo?</label><input id="autorizado_por" required></div>
+        <div class="doble"><label for="observacion">Observación</label><textarea id="observacion" rows="2"></textarea></div>
+      </div>
+    </div>
+    <footer>
+      <button type="button" class="boton" id="autorizar-cancelar">No recibir</button>
+      <button type="submit" class="boton primario">Recibir con autorización</button>
+    </footer>
+  </form>
+</dialog>
+
+{% include "_modal_material.html" %}
+<iframe id="marco-impresion" title="Impresión de rótulos" style="position:absolute;width:0;height:0;border:0;left:-9999px"></iframe>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='material.js') }}"></script>
+<script src="{{ url_for('static', filename='recibo.js') }}"></script>
+{% endblock %}

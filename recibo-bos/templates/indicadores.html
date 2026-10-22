@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block titulo %}Indicadores · Recibo BOS{% endblock %}
+{% macro tiempo(seg) -%}
+  {%- if seg is none -%}—{%- elif seg >= 60 -%}{{ (seg // 60)|int }} min {{ (seg % 60)|round|int }} s{%- else -%}{{ seg|round|int }} s{%- endif -%}
+{%- endmacro %}
+{% block contenido %}
+<h1>Indicadores del piloto</h1>
+
+<form class="tarjeta filtros" method="get">
+  <div><label for="desde">Desde</label><input id="desde" type="date" name="desde" value="{{ desde }}"></div>
+  <div><label for="hasta">Hasta</label><input id="hasta" type="date" name="hasta" value="{{ hasta }}"></div>
+  <div style="min-width:auto"><button class="boton primario" type="submit">Ver</button></div>
+</form>
+
+<div class="indicadores">
+  <div class="indicador"><b>{{ r.recibos }}</b><span>Recibos en {{ r.dias }} día(s)</span></div>
+  <div class="indicador"><b>{{ '{:,}'.format(r.cajas).replace(',', '.') }}</b><span>Cajas recibidas</span></div>
+  <div class="indicador"><b>{{ r.estibas }}</b><span>Estibas rotuladas</span></div>
+  <div class="indicador"><b>{{ tiempo(r.tiempo_app) }}</b><span>Tiempo promedio por recibo (app)</span></div>
+  <div class="indicador"><b>{{ r.no_cumple }}</b><span>Recibidos NO CUMPLE</span></div>
+  <div class="indicador"><b>{{ r.materiales }}</b><span>Materiales creados o actualizados</span></div>
+  <div class="indicador"><b>{{ r.anulados }}</b><span>Recibos anulados (con motivo)</span></div>
+</div>
+
+<section class="tarjeta">
+  <h2>Comparación con el Excel</h2>
+  <form method="post" class="filtros" style="margin-bottom:14px">
+    <div><label for="minutos_excel">Tiempo promedio por recibo en Excel (minutos)</label>
+      <input id="minutos_excel" name="minutos_excel" type="number" step="0.1" min="0"
+             value="{{ (r.tiempo_excel / 60)|round(1) if r.tiempo_excel else '' }}">
+      <span class="ayuda">Cronometre unos 10 recibos hechos en el Excel y escriba el promedio</span></div>
+    <div style="min-width:auto"><button class="boton" type="submit">Guardar</button></div>
+  </form>
+  {% if r.ahorro_recibo is defined %}
+  <div class="indicadores" style="margin:0">
+    <div class="indicador"><b>{{ tiempo(r.tiempo_excel) }}</b><span>Excel por recibo</span></div>
+    <div class="indicador"><b>{{ tiempo(r.tiempo_app) }}</b><span>Recibo BOS por recibo</span></div>
+    <div class="indicador"><b>{{ r.ahorro_pct|round|int }}%</b><span>Menos tiempo por recibo</span></div>
+    <div class="indicador"><b>{{ r.horas_mes|round(1) }} h</b><span>Horas ahorradas al mes (proyección, {{ 26 }} días)</span></div>
+  </div>
+  {% else %}
+  <p class="ayuda">Escriba el tiempo del Excel y haga recibos en la app para ver el ahorro.</p>
+  {% endif %}
+</section>
+
+<div class="tarjeta tabla-contenedor" style="padding:0">
+  <table>
+    <thead><tr><th>Fecha</th><th class="num">Recibos</th><th class="num">O.C</th><th class="num">Cajas</th>
+      <th class="num">Estibas</th><th class="num">Tiempo prom.</th><th class="num">NO CUMPLE</th></tr></thead>
+    <tbody>
+    {% for d in dias %}
+      <tr><td>{{ d.fecha }}</td><td class="num">{{ d.recibos }}</td><td class="num">{{ d.ocs }}</td>
+        <td class="num">{{ d.cajas }}</td><td class="num">{{ d.estibas }}</td>
+        <td class="num">{{ tiempo(d.tiempo_prom) }}</td><td class="num">{{ d.no_cumple }}</td></tr>
+    {% else %}
+      <tr><td colspan="7" style="color:var(--gris-500)">No hay recibos en ese rango.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
