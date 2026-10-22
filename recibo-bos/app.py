@@ -24,9 +24,11 @@ CAMPOS_NUMERICOS = {"tendidos", "pisos", "cajas_estiba", "vida_util_cedi", "vida
 DIAS_HABILES_MES = 26
 NIVELES_TINTA = {
     "normal": "Normal (como el Excel)",
-    "ahorro": "Ahorro de tóner: números sin negrita y sin fondos grises",
-    "maximo": "Máximo ahorro: números grandes solo con el contorno",
+    "ahorro": "Ahorro de tóner: números negros sin negrita y sin fondos grises",
+    "gris": "Modo eco: números rellenos en gris y sin fondos grises",
 }
+# Tono de los números en modo eco: la láser imprime el gris con puntos, así gasta menos tóner que el negro.
+TONOS_GRIS = {"oscuro": ("Oscuro", "#555"), "medio": ("Medio", "#777"), "claro": ("Claro", "#999")}
 _ultimo_respaldo = None
 
 
@@ -91,9 +93,13 @@ def recibo():
 def ajustes_rotulo(args=None):
     """Ahorro de tóner y reverso en blanco guardados en la pantalla Impresora (la vista previa los puede cambiar)."""
     args = args or {}
-    tinta = args.get("tinta") or db.leer_config("rotulo_tinta", "ahorro")
+    tinta = args.get("tinta") or db.leer_config("rotulo_tinta", "gris")
+    tinta = "gris" if tinta == "maximo" else tinta  # el contorno de la versión anterior se cambió por gris
+    tono = args.get("tono") or db.leer_config("rotulo_tono", "medio")
     reverso = args.get("reverso") if "reverso" in args else db.leer_config("rotulo_reverso_blanco", "")
-    return {"tinta": tinta if tinta in NIVELES_TINTA else "ahorro", "reverso_blanco": reverso == "1"}
+    tono = tono if tono in TONOS_GRIS else "medio"
+    return {"tinta": tinta if tinta in NIVELES_TINTA else "gris", "tono": tono, "color_tono": TONOS_GRIS[tono][1],
+            "reverso_blanco": reverso == "1"}
 
 
 def _render_rotulo(r, estibas):
@@ -372,7 +378,9 @@ def impresora_config():
         accion = request.form.get("accion")
         if accion == "rotulo":
             tinta = request.form.get("tinta")
-            db.guardar_config("rotulo_tinta", tinta if tinta in NIVELES_TINTA else "ahorro")
+            db.guardar_config("rotulo_tinta", tinta if tinta in NIVELES_TINTA else "gris")
+            tono = request.form.get("tono")
+            db.guardar_config("rotulo_tono", tono if tono in TONOS_GRIS else "medio")
             db.guardar_config("rotulo_reverso_blanco", "1" if request.form.get("reverso") else "")
             return redirect(url_for("impresora_config", mensaje="Ajustes del rótulo guardados"))
         acciones = {
@@ -397,6 +405,7 @@ def impresora_config():
         except (impresora.ErrorImpresora, ValueError) as e:
             error = error or f"No se pudo leer la lista de impresoras: {e}"
     return render_template("impresora.html", ajustes=ajustes_rotulo(), niveles=NIVELES_TINTA,
+                           tonos=TONOS_GRIS,
                            impresoras=impresoras, es_windows=impresora.ES_WINDOWS, mensaje=mensaje, error=error,
                            pagina="impresora")
 

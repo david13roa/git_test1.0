@@ -18,7 +18,8 @@ RECIBO BOS - INSTALACION EN EL PC DE LA CAVA
    - En Windows, deje la Kyocera como impresora PREDETERMINADA.
    - La aplicacion imprime directo en ella, sin preguntar, en carta horizontal.
    - En la pestana "Impresora" de la aplicacion se configura:
-       * El ahorro de toner del rotulo (recomendado: "Ahorro de toner").
+       * El ahorro de toner del rotulo (recomendado: "Modo eco", numeros en gris;
+         el tono del gris se puede aclarar u oscurecer).
        * Cual impresora usar, dejarla en una cara + blanco y negro, y abrir sus
          preferencias para activar EcoPrint (el modo eco del panel no sirve si el
          controlador de Windows lo apaga).

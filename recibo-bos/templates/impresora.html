@@ -13,8 +13,16 @@
     <div class="opciones">
       {% for clave, texto in niveles.items() %}
       <label class="opcion"><input type="radio" name="tinta" value="{{ clave }}" {{ 'checked' if ajustes.tinta == clave }}>
-        {{ texto }}{% if clave == 'ahorro' %} <span class="etiqueta cumple">Recomendado</span>{% endif %}</label>
+        {{ texto }}{% if clave == 'gris' %} <span class="etiqueta cumple">Recomendado</span>{% endif %}</label>
       {% endfor %}
+    </div>
+    <div class="filtros" style="margin-top:10px">
+      <div><label for="tono">Tono del gris (modo eco)</label>
+        <select id="tono" name="tono">
+          {% for clave, (texto, color) in tonos.items() %}
+          <option value="{{ clave }}" {{ 'selected' if ajustes.tono == clave }}>{{ texto }}</option>
+          {% endfor %}
+        </select></div>
     </div>
     <p class="ayuda">Los números grandes en negrita y los recuadros grises gastan casi todo el tóner de la hoja.
       Esto se suma al EcoPrint de la impresora.</p>
@@ -92,7 +100,7 @@
 <script>
   const formulario = document.querySelector("form[method=post]");
   function parametros() {
-    const p = new URLSearchParams({ tinta: formulario.tinta.value, reverso: formulario.reverso.checked ? "1" : "" });
+    const p = new URLSearchParams({ tinta: formulario.tinta.value, tono: formulario.tono.value, reverso: formulario.reverso.checked ? "1" : "" });
     return p.toString();
   }
   formulario.addEventListener("change", () => {

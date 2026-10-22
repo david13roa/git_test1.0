@@ -62,12 +62,12 @@
 
     /* Ahorro de tóner (pantalla Impresora). Los números de 200 pt en negrita y los recuadros grises son
        casi todo el tóner de la hoja; el modo EcoPrint de la impresora no basta si el controlador lo apaga. */
-    .tinta-ahorro .gris, .tinta-maximo .gris { background: none; border: 1.5px solid #000; }
+    .tinta-ahorro .gris, .tinta-gris .gris { background: none; border: 1.5px solid #000; }
     .tinta-ahorro .codigo, .tinta-ahorro .cajas b, .tinta-ahorro .posicion, .tinta-ahorro .dia, .tinta-ahorro .venc { font-weight: 400; }
-    .tinta-ahorro .desc, .tinta-maximo .desc { font-weight: 400; }
-    .tinta-ahorro .cajas .saldo, .tinta-maximo .cajas .saldo { background: none; color: #000; border: 2px solid #000; }
-    .tinta-maximo .codigo, .tinta-maximo .cajas b, .tinta-maximo .dia, .tinta-maximo .venc {
-      color: #fff; -webkit-text-stroke: 3px #000; letter-spacing: 2pt; }
+    .tinta-ahorro .desc { font-weight: 400; }
+    .tinta-ahorro .cajas .saldo, .tinta-gris .cajas .saldo { background: none; color: #000; border: 2px solid #000; }
+    /* Modo eco: los números grandes conservan la negrita y el relleno, pero en gris (tono en la pantalla Impresora). */
+    .tinta-gris .codigo, .tinta-gris .cajas b, .tinta-gris .dia, .tinta-gris .venc { color: var(--tono); }
 
     /* Hoja en blanco detrás de cada rótulo, para impresoras que insisten en imprimir a doble cara. */
     .reverso { display: none; }
@@ -84,7 +84,7 @@
     }
   </style>
 </head>
-<body class="tinta-{{ ajustes.tinta }}">
+<body class="tinta-{{ ajustes.tinta }}" style="--tono: {{ ajustes.color_tono }}">
   <div class="controles">
     <button onclick="window.print()">🖨 Imprimir {{ estibas|length }} rótulo(s)</button>
   </div>
