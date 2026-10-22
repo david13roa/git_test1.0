@@ -13,6 +13,7 @@
     body { font-family: Arial, Helvetica, sans-serif; font-weight: 700; color: #000; }
 
     .controles { font-family: "Segoe UI", system-ui, Arial, sans-serif; padding: 12px; text-align: center; }
+    .controles #estado-impresion { margin-top: 6px; font-weight: 600; }
     .controles button { font: inherit; font-weight: 700; padding: 10px 22px; border-radius: 6px; border: 0; background: #e90729; color: #fff; cursor: pointer; }
 
     .hoja {
@@ -86,7 +87,8 @@
 </head>
 <body class="tinta-{{ ajustes.tinta }}" style="--tono: {{ ajustes.color_tono }}">
   <div class="controles">
-    <button onclick="window.print()">🖨 Imprimir {{ estibas|length }} rótulo(s)</button>
+    <button id="btn-imprimir" onclick="imprimir()">🖨 Imprimir {{ estibas|length }} rótulo(s)</button>
+    <div id="estado-impresion"></div>
   </div>
   {% for e in estibas %}
   <section class="hoja">
@@ -116,11 +118,32 @@
   </section>
   {% if ajustes.reverso_blanco %}<div class="reverso"></div>{% endif %}
   {% endfor %}
-  {% if imprimir %}
   <script>
-    window.addEventListener("afterprint", () => parent.postMessage("rotulo-impreso", location.origin));
-    window.addEventListener("load", () => setTimeout(() => window.print(), 150));
+    // Directa: el servidor la manda a la impresora a una cara. Navegador: cuadro de impresión de Edge.
+    const DIRECTA = {{ 'true' if ajustes.directa else 'false' }};
+    function avisar(mensaje) { if (parent !== window) parent.postMessage(mensaje, location.origin); }
+    async function imprimir() {
+      if (!DIRECTA) { window.print(); return; }
+      const boton = document.getElementById("btn-imprimir"), estado = document.getElementById("estado-impresion");
+      boton.disabled = true; estado.textContent = "Enviando a la impresora…";
+      try {
+        const r = await fetch("{{ url_for('api_imprimir') }}", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ruta: location.pathname + location.search }),
+        });
+        const res = await r.json();
+        if (!r.ok) throw new Error(res.error);
+        estado.textContent = `✔ Enviado a ${res.impresora}`;
+        avisar("rotulo-impreso");
+      } catch (e) {
+        estado.textContent = `✖ ${e.message}`;
+        avisar({ error: `No se imprimió el rótulo: ${e.message}` });
+      } finally {
+        boton.disabled = false;
+      }
+    }
+    if (!DIRECTA) window.addEventListener("afterprint", () => avisar("rotulo-impreso"));
+    {% if imprimir %}window.addEventListener("load", () => setTimeout(imprimir, 150));{% endif %}
   </script>
-  {% endif %}
 </body>
 </html>

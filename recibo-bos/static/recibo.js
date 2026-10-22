@@ -157,7 +157,9 @@ function imprimir(id) {
 
 // Cuando el rótulo termina de imprimirse se recarga para actualizar "Recibos de hoy".
 window.addEventListener("message", (ev) => {
-  if (ev.origin === location.origin && ev.data === "rotulo-impreso") location.reload();
+  if (ev.origin !== location.origin) return;
+  if (ev.data === "rotulo-impreso") location.reload();
+  else if (ev.data && ev.data.error) aviso(`${ev.data.error}<br>Puede reimprimirlo desde «Recibos de hoy».`, true);
 });
 
 // ---------- eventos

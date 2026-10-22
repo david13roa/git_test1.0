@@ -4,11 +4,13 @@ Desarrollo:   python app.py
 Producción:   waitress-serve --listen=127.0.0.1:8080 app:app   (ver iniciar.bat)
 """
 import io
+import threading
 from datetime import date, datetime, timedelta
 
 import openpyxl
 import segno
 from flask import Flask, abort, jsonify, redirect, render_template, request, send_file, url_for
+from urllib.parse import parse_qsl, urlencode, urlsplit
 
 import db
 import importar_excel
@@ -28,6 +30,11 @@ NIVELES_TINTA = {
     "gris": "Modo eco: números rellenos en gris y sin fondos grises",
 }
 # Tono de los números en modo eco: la láser imprime el gris con puntos, así gasta menos tóner que el negro.
+METODOS_IMPRESION = {
+    "directa": "Directa a la impresora, siempre a una cara (recomendado)",
+    "navegador": "Por Edge, como antes (Edge puede imprimir a doble cara)",
+}
+_impresion = threading.Lock()  # un rótulo a la vez: Edge sin ventana usa un solo perfil
 TONOS_GRIS = {"oscuro": ("Oscuro", "#555"), "medio": ("Medio", "#777"), "claro": ("Claro", "#999")}
 _ultimo_respaldo = None
 
@@ -98,8 +105,10 @@ def ajustes_rotulo(args=None):
     tono = args.get("tono") or db.leer_config("rotulo_tono", "medio")
     reverso = args.get("reverso") if "reverso" in args else db.leer_config("rotulo_reverso_blanco", "")
     tono = tono if tono in TONOS_GRIS else "medio"
+    metodo = args.get("metodo") or db.leer_config("rotulo_metodo", "directa")
     return {"tinta": tinta if tinta in NIVELES_TINTA else "gris", "tono": tono, "color_tono": TONOS_GRIS[tono][1],
-            "reverso_blanco": reverso == "1"}
+            "reverso_blanco": reverso == "1", "metodo": metodo,
+            "directa": metodo == "directa" and impresora.directa_disponible()}
 
 
 def _render_rotulo(r, estibas):
@@ -382,6 +391,8 @@ def impresora_config():
             tono = request.form.get("tono")
             db.guardar_config("rotulo_tono", tono if tono in TONOS_GRIS else "medio")
             db.guardar_config("rotulo_reverso_blanco", "1" if request.form.get("reverso") else "")
+            metodo = request.form.get("metodo")
+            db.guardar_config("rotulo_metodo", metodo if metodo in METODOS_IMPRESION else "directa")
             return redirect(url_for("impresora_config", mensaje="Ajustes del rótulo guardados"))
         acciones = {
             "predeterminar": (impresora.predeterminar, "Ahora es la impresora predeterminada"),
@@ -405,7 +416,8 @@ def impresora_config():
         except (impresora.ErrorImpresora, ValueError) as e:
             error = error or f"No se pudo leer la lista de impresoras: {e}"
     return render_template("impresora.html", ajustes=ajustes_rotulo(), niveles=NIVELES_TINTA,
-                           tonos=TONOS_GRIS,
+                           tonos=TONOS_GRIS, metodos=METODOS_IMPRESION,
+                           directa_disponible=impresora.directa_disponible(),
                            impresoras=impresoras, es_windows=impresora.ES_WINDOWS, mensaje=mensaje, error=error,
                            pagina="impresora")
 
@@ -498,6 +510,27 @@ def api_crear_recibo():
              calc["status"], material["cuadrante"], material["ubicacion"], autorizado or None,
              (d.get("observacion") or "").strip() or None, tiempo))
     return jsonify({"id": cur.lastrowid, **calc})
+
+
+@app.post("/api/imprimir")
+def api_imprimir():
+    """Imprime un rótulo directo en la impresora predeterminada de este PC, a una sola cara."""
+    partes = urlsplit((request.get_json(silent=True) or {}).get("ruta", ""))
+    if not partes.path.startswith("/rotulo/") or partes.netloc:
+        return jsonify({"error": "Rótulo no válido"}), 400
+    if not impresora.directa_disponible():
+        return jsonify({"error": "La impresión directa no está disponible en este PC: ejecute instalar.bat otra vez"}), 503
+    # Sin "imprimir=1": la copia que abre Edge para hacer el PDF no debe volver a mandar a imprimir.
+    consulta = urlencode([(k, v) for k, v in parse_qsl(partes.query) if k != "imprimir"])
+    url = f"http://127.0.0.1:{request.environ.get('SERVER_PORT', '8080')}{partes.path}" + (f"?{consulta}" if consulta else "")
+    try:
+        with _impresion:
+            nombre = impresora.imprimir_url(url)
+    except impresora.ErrorImpresora as e:
+        return jsonify({"error": str(e)}), 500
+    except Exception as e:  # errores de Windows o del controlador
+        return jsonify({"error": f"La impresora no recibió el rótulo: {e}"}), 500
+    return jsonify({"ok": True, "impresora": nombre})
 
 
 @app.post("/api/recibos/<int:recibo_id>/anular")

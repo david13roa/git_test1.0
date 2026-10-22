@@ -17,7 +17,12 @@ RECIBO BOS - INSTALACION EN EL PC DE LA CAVA
 4. IMPRESORA
    - En Windows, deje la Kyocera como impresora PREDETERMINADA.
    - La aplicacion imprime directo en ella, sin preguntar, en carta horizontal.
+   - IMPRESION DIRECTA (evita la doble cara): la app manda cada rotulo a la
+     impresora predeterminada pidiendo UNA SOLA CARA, sin pasar por el cuadro de
+     impresion de Edge. Necesita volver a ejecutar instalar.bat una vez (con
+     internet) para instalar las librerias nuevas.
    - En la pestana "Impresora" de la aplicacion se configura:
+       * Como imprimir: "Directa" (recomendado) o "Por Edge" como antes.
        * El ahorro de toner del rotulo (recomendado: "Modo eco", numeros en gris;
          el tono del gris se puede aclarar u oscurecer).
        * Cual impresora usar, dejarla en una cara + blanco y negro, y abrir sus

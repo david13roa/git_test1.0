@@ -9,7 +9,22 @@
 <div class="recibo-grid">
   <form class="tarjeta" method="post">
     <input type="hidden" name="accion" value="rotulo">
-    <h2>Tóner del rótulo</h2>
+    <h2>Cómo imprimir</h2>
+    <div class="opciones">
+      {% for clave, texto in metodos.items() %}
+      <label class="opcion"><input type="radio" name="metodo" value="{{ clave }}" {{ 'checked' if ajustes.metodo == clave }}
+        {{ 'disabled' if clave == 'directa' and not directa_disponible }}> {{ texto }}</label>
+      {% endfor %}
+    </div>
+    {% if directa_disponible %}
+    <p class="ayuda">La impresión directa no usa el cuadro de impresión de Edge: le pide a la impresora una sola cara
+      en cada rótulo y conserva sus preferencias (EcoPrint).</p>
+    {% else %}
+    <p class="mensaje error" style="margin-top:8px">La impresión directa no está lista en este PC. Cierre la app, ejecute
+      <b>instalar.bat</b> otra vez (necesita internet) y vuelva a abrirla.</p>
+    {% endif %}
+
+    <h2 style="margin-top:18px">Tóner del rótulo</h2>
     <div class="opciones">
       {% for clave, texto in niveles.items() %}
       <label class="opcion"><input type="radio" name="tinta" value="{{ clave }}" {{ 'checked' if ajustes.tinta == clave }}>
@@ -38,6 +53,7 @@
       <button class="boton" type="button" id="btn-prueba">🖨 Imprimir página de prueba</button>
       <span class="atajo">La prueba son 2 rótulos: deben salir en 2 hojas separadas.</span>
     </div>
+    <div id="resultado-prueba" class="mensaje" style="margin:12px 0 0" hidden></div>
   </form>
 
   <section class="tarjeta">
@@ -100,14 +116,23 @@
 <script>
   const formulario = document.querySelector("form[method=post]");
   function parametros() {
-    const p = new URLSearchParams({ tinta: formulario.tinta.value, tono: formulario.tono.value, reverso: formulario.reverso.checked ? "1" : "" });
+    const p = new URLSearchParams({ tinta: formulario.tinta.value, tono: formulario.tono.value,
+      metodo: formulario.metodo.value, reverso: formulario.reverso.checked ? "1" : "" });
     return p.toString();
   }
   formulario.addEventListener("change", () => {
     document.getElementById("previa").src = "{{ url_for('rotulo_muestra') }}?" + parametros();
   });
+  const resultado = document.getElementById("resultado-prueba");
   document.getElementById("btn-prueba").addEventListener("click", () => {
+    resultado.hidden = false; resultado.classList.remove("error"); resultado.textContent = "Enviando la prueba…";
     document.getElementById("marco-impresion").src = "{{ url_for('rotulo_muestra') }}?imprimir=1&" + parametros();
+  });
+  window.addEventListener("message", (ev) => {
+    if (ev.origin !== location.origin) return;
+    resultado.hidden = false;
+    resultado.classList.toggle("error", Boolean(ev.data && ev.data.error));
+    resultado.textContent = ev.data && ev.data.error ? ev.data.error : "✔ Prueba enviada. Revise que salgan 2 hojas impresas por una sola cara.";
   });
 </script>
 {% endblock %}
